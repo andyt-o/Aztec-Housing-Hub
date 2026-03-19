@@ -1,8 +1,9 @@
 import { useState } from "react";
 import "./styles.css";
 import sdsuLogo from "./assets/sdsulogo.jpg";
+import Listings from "./components/Listings";
 
-const navLinks = ["Listings", "Add Listing", "Profile", "Roommates", "Login"];
+const navLinks = ["Home", "Listings", "Add Listing", "Profile", "Roommates", "Login"];
 
 const filters = [
   "Keyword search",
@@ -171,6 +172,7 @@ const offCampusListings = [
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("on-campus");
+  const [currentPage, setCurrentPage] = useState("home");
 
   return (
     <div className="app-shell">
@@ -186,7 +188,21 @@ export default function App() {
 
           <nav className="top-nav" aria-label="Primary">
             {navLinks.map((link) => (
-              <a href="/" key={link} onClick={(event) => event.preventDefault()}>
+              <a
+                href="/"
+                key={link}
+                className={
+                  (link === "Home" && currentPage === "home") ||
+                  (link === "Listings" && currentPage === "listings")
+                    ? "nav-active"
+                    : ""
+                }
+                onClick={(event) => {
+                  event.preventDefault();
+                  if (link === "Home") setCurrentPage("home");
+                  else if (link === "Listings") setCurrentPage("listings");
+                }}
+              >
                 {link}
               </a>
             ))}
@@ -194,106 +210,116 @@ export default function App() {
         </div>
       </header>
 
-      <main className="page-content">
-        <section className="hero">
-          <div>
-            <h2>Find student housing near SDSU.</h2>
-            <p className="hero-text">
-              Browse listings, add housing posts, manage your profile, and
-              connect with other students.
-            </p>
-          </div>
+      {/* ── PAGE: Listings ── */}
+      {currentPage === "listings" && (
+        <main className="page-content">
+          <Listings />
+        </main>
+      )}
 
-          <div className="hero-panel">
-            <h3>Search Filters</h3>
-            <div className="filter-list">
-              {filters.map((filter) => (
-                <span className="filter-chip" key={filter}>
-                  {filter}
-                </span>
-              ))}
+      {/* ── PAGE: Home (original) ── */}
+      {currentPage === "home" && (
+        <main className="page-content">
+          <section className="hero">
+            <div>
+              <h2>Find student housing near SDSU.</h2>
+              <p className="hero-text">
+                Browse listings, add housing posts, manage your profile, and
+                connect with other students.
+              </p>
             </div>
-          </div>
-        </section>
 
-        <section className="section-block">
-          <div className="section-heading">
-            <p className="eyebrow">Listings Feed</p>
-            <h3>Housing Options near SDSU</h3>
-          </div>
-
-          <div className="tabs">
-            <button
-              className={`tab-button ${activeTab === "on-campus" ? "active" : ""}`}
-              onClick={() => setActiveTab("on-campus")}
-            >
-              On-Campus Housing (SDSU)
-            </button>
-            <button
-              className={`tab-button ${activeTab === "off-campus" ? "active" : ""}`}
-              onClick={() => setActiveTab("off-campus")}
-            >
-              Off-Campus Housing
-            </button>
-          </div>
-
-          {activeTab === "on-campus" && onCampusHousing.length > 0 && (
-            <div className="listings-section">
-              {onCampusHousing.map((group) => (
-                <div className="housing-group" key={group.title}>
-                  <h5>{group.title}</h5>
-                  {group.subtitle && <p className="housing-subtitle">{group.subtitle}</p>}
-
-                  <div className="housing-table-wrap">
-                    <table className="housing-table">
-                      <thead>
-                        <tr>
-                          <th>Room type</th>
-                          <th>2nd Year Basic</th>
-                          <th>2nd Year Standard</th>
-                          <th>Flex 5</th>
-                          <th>Flex 7</th>
-                          <th>Meals Plus</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {group.rooms.map((room) => (
-                          <tr key={room.type}>
-                            <td>{room.type}</td>
-                            <td>{room.rates["2nd Year Basic"]}</td>
-                            <td>{room.rates["2nd Year Standard"]}</td>
-                            <td>{room.rates["Flex 5"]}</td>
-                            <td>{room.rates["Flex 7"]}</td>
-                            <td>{room.rates["Meals Plus"]}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {group.note && <p className="housing-note">* {group.note}</p>}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {activeTab === "off-campus" && (
-            <div className="listings-section">
-              <div className="listing-grid">
-                {offCampusListings.map((listing) => (
-                  <article className="listing-card" key={listing.title}>
-                    <h4>{listing.title}</h4>
-                    <p>{listing.price}</p>
-                    <p>{listing.area} - {listing.distance} from campus</p>
-                    <p>{listing.type}</p>
-                    <p>{listing.availability}</p>
-                  </article>
+            <div className="hero-panel">
+              <h3>Search Filters</h3>
+              <div className="filter-list">
+                {filters.map((filter) => (
+                  <span className="filter-chip" key={filter}>
+                    {filter}
+                  </span>
                 ))}
               </div>
             </div>
-          )}
-        </section>
-      </main>
+          </section>
+
+          <section className="section-block">
+            <div className="section-heading">
+              <p className="eyebrow">Listings Feed</p>
+              <h3>Housing Options near SDSU</h3>
+            </div>
+
+            <div className="tabs">
+              <button
+                className={`tab-button ${activeTab === "on-campus" ? "active" : ""}`}
+                onClick={() => setActiveTab("on-campus")}
+              >
+                On-Campus Housing (SDSU)
+              </button>
+              <button
+                className={`tab-button ${activeTab === "off-campus" ? "active" : ""}`}
+                onClick={() => setActiveTab("off-campus")}
+              >
+                Off-Campus Housing
+              </button>
+            </div>
+
+            {activeTab === "on-campus" && onCampusHousing.length > 0 && (
+              <div className="listings-section">
+                {onCampusHousing.map((group) => (
+                  <div className="housing-group" key={group.title}>
+                    <h5>{group.title}</h5>
+                    {group.subtitle && <p className="housing-subtitle">{group.subtitle}</p>}
+
+                    <div className="housing-table-wrap">
+                      <table className="housing-table">
+                        <thead>
+                          <tr>
+                            <th>Room type</th>
+                            <th>2nd Year Basic</th>
+                            <th>2nd Year Standard</th>
+                            <th>Flex 5</th>
+                            <th>Flex 7</th>
+                            <th>Meals Plus</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {group.rooms.map((room) => (
+                            <tr key={room.type}>
+                              <td>{room.type}</td>
+                              <td>{room.rates["2nd Year Basic"]}</td>
+                              <td>{room.rates["2nd Year Standard"]}</td>
+                              <td>{room.rates["Flex 5"]}</td>
+                              <td>{room.rates["Flex 7"]}</td>
+                              <td>{room.rates["Meals Plus"]}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {group.note && <p className="housing-note">* {group.note}</p>}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {activeTab === "off-campus" && (
+              <div className="listings-section">
+                <div className="listing-grid">
+                  {offCampusListings.map((listing) => (
+                    <article className="listing-card" key={listing.title}>
+                      <h4>{listing.title}</h4>
+                      <p>{listing.price}</p>
+                      <p>{listing.area} - {listing.distance} from campus</p>
+                      <p>{listing.type}</p>
+                      <p>{listing.availability}</p>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+        </main>
+      )}
     </div>
   );
 }
