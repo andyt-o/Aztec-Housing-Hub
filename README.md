@@ -44,7 +44,7 @@ The homepage currently includes:
 The current version is intentionally simple and frontend-focused so the project
 has a strong first commit without adding unnecessary backend complexity.
 
-### Spring 2 Backend + More Frontend
+### Sprint 2 Backend + More Frontend
 - Working user login/sign up.
 - Stores user data safely and securely.
 - Connected the frontend to the backend.
