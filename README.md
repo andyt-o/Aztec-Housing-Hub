@@ -33,7 +33,7 @@ How to run the backend:
 1. Open a terminal in `Aztec-Housing-Hub`
 2. Run `python main.py`
 
-### Sprint 1 Homepage
+### Sprint 1 Homepage ~ 2 weeks
 The homepage currently includes:
 
 - A polished SDSU-focused landing page
@@ -44,12 +44,12 @@ The homepage currently includes:
 The current version is intentionally simple and frontend-focused so the project
 has a strong first commit without adding unnecessary backend complexity.
 
-### Sprint 2 Backend + More Frontend
+### Sprint 2 Backend + More Frontend ~ 1 week
 - Working user login/sign up.
 - Stores user data safely and securely.
 - Connected the frontend to the backend.
 
-### Sprint 3 Profile + Roommate Matching
+### Sprint 3 Profile + Roommate Matching ~ 1 week
 - Added a Profile tab where logged-in users can enter roommate preferences such as hobbies, cleanliness, and sleep schedule.
 - Added a Roommates tab that shows potential roommate cards and compatibility scores.
 - Added roommate filters so users can find similar roommates by cleanliness, sleep schedule, hobby keyword, and a match percentage.
