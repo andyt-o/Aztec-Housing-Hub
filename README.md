@@ -52,4 +52,4 @@ has a strong first commit without adding unnecessary backend complexity.
 ### Sprint 3 Profile + Roommate Matching
 - Added a Profile tab where logged-in users can enter roommate preferences such as hobbies, cleanliness, and sleep schedule.
 - Added a Roommates tab that shows potential roommate cards and compatibility scores.
-- Added roommate filters so users can find similar roommates by cleanliness, sleep schedule, hobby keyword, and minimum match percentage.
+- Added roommate filters so users can find similar roommates by cleanliness, sleep schedule, hobby keyword, and a match percentage.
