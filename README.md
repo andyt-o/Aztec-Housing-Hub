@@ -30,7 +30,7 @@ The React frontend lives in `client/` and uses Vite.
 ### Backend
 How to run the backend:
 
-1. Open a terminal in `Aztec-Housing-Hub`
+1. Open a terminal in `Aztec-Housing-Hub/Backend`
 2. Run `python main.py`
 
 ### Sprint 1 Homepage ~ 2 weeks
