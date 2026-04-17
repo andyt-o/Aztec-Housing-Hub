@@ -111,8 +111,8 @@ const housingTypes = ["All", "Apartment", "Room", "House", "Sublease"];
 const priceRanges = [
   { label: "All Prices", min: 0, max: Infinity },
   { label: "Under $1,000", min: 0, max: 999 },
-  { label: "$1,000 – $1,500", min: 1000, max: 1500 },
-  { label: "$1,500 – $2,000", min: 1500, max: 2000 },
+  { label: "$1,000 - $1,500", min: 1000, max: 1500 },
+  { label: "$1,500 - $2,000", min: 1500, max: 2000 },
   { label: "$2,000+", min: 2000, max: Infinity },
 ];
 const bedOptions = ["Any", "1", "2", "3", "4+"];
@@ -187,7 +187,7 @@ export default function Listings({ subleaseListings = [] }) {
         </div>
       )}
 
-      {/* ── Filters ── */}
+      {/* --- Filters --- */}
       <div className="filters-bar">
         <input
           type="text"
@@ -245,7 +245,7 @@ export default function Listings({ subleaseListings = [] }) {
         </div>
       </div>
 
-      {/* ── Results ── */}
+      {/* --- Results --- */}
       {filtered.length === 0 ? (
         <div className="no-results">
           <p>No listings match your filters. Try broadening your search.</p>
