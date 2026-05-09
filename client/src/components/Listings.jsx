@@ -1,123 +1,12 @@
 import { useState } from "react";
-// Hey
-const offCampusListings = [
-  {
-    id: 1,
-    title: "6 Nineteen Apartments",
-    price: 1400,
-    area: "College Area",
-    type: "Apartment",
-    beds: 2,
-    baths: 1,
-    availability: "Available Aug 1",
-    distance: 0.4,
-    description:
-      "Modern 2-bed apartment steps from campus. In-unit laundry, parking included.",
-  },
-  {
-    id: 2,
-    title: "The Rive",
-    price: 1800,
-    area: "Linda Vista",
-    type: "Apartment",
-    beds: 2,
-    baths: 2,
-    availability: "Available Now",
-    distance: 1.0,
-    description:
-      "Spacious living with resort-style pool and fitness center. Pet friendly.",
-  },
-  {
-    id: 3,
-    title: "College View Apartments",
-    price: 1250,
-    area: "College Area",
-    type: "Apartment",
-    beds: 1,
-    baths: 1,
-    availability: "Available Sep 1",
-    distance: 0.3,
-    description:
-      "Affordable 1-bed close to trolley and campus. Utilities included.",
-  },
-  {
-    id: 4,
-    title: "Casa Diego",
-    price: 1600,
-    area: "Serra Mesa",
-    type: "Apartment",
-    beds: 3,
-    baths: 2,
-    availability: "Available Jul 15",
-    distance: 3.2,
-    description:
-      "Quiet neighborhood, great for focused students. Garage parking available.",
-  },
-  {
-    id: 5,
-    title: "Topaz Apartments",
-    price: 2000,
-    area: "Tierrasanta",
-    type: "Apartment",
-    beds: 3,
-    baths: 2,
-    availability: "Available Aug 15",
-    distance: 4.0,
-    description:
-      "Premium living with mountain views. Gated community with 24/7 security.",
-  },
-  {
-    id: 6,
-    title: "Campus Terrace Room",
-    price: 850,
-    area: "College Area",
-    type: "Room",
-    beds: 1,
-    baths: 1,
-    availability: "Available Now",
-    distance: 0.2,
-    description:
-      "Private room in a shared 3-bed house. Walking distance to campus.",
-  },
-  {
-    id: 7,
-    title: "Adobe Falls House",
-    price: 3200,
-    area: "Adobe Falls",
-    type: "House",
-    beds: 4,
-    baths: 3,
-    availability: "Available Aug 1",
-    distance: 1.5,
-    description:
-      "Full house rental, great for a group of students. Large backyard.",
-  },
-  {
-    id: 8,
-    title: "College Blvd Sublease",
-    price: 950,
-    area: "College Area",
-    type: "Sublease",
-    beds: 1,
-    baths: 1,
-    availability: "Available Jun 1",
-    distance: 0.5,
-    description:
-      "Summer sublease through August. Furnished room, all utilities included.",
-  },
-];
 
-const housingTypes = ["All", "Apartment", "Room", "House", "Sublease"];
-const priceRanges = [
-  { label: "All Prices", min: 0, max: Infinity },
-  { label: "Under $1,000", min: 0, max: 999 },
-  { label: "$1,000 - $1,500", min: 1000, max: 1500 },
-  { label: "$1,500 - $2,000", min: 1500, max: 2000 },
-  { label: "$2,000+", min: 2000, max: Infinity },
-];
-const bedOptions = ["Any", "1", "2", "3", "4+"];
-
-export default function Listings({ subleaseListings = [] }) {
+export default function Listings({
+  subleaseListings = [],
+  offCampusListings = [],
+  housingTypes = [],
+  priceRanges = [],
+  bedOptions = [],
+}) {
   const [search, setSearch] = useState("");
   const [selectedType, setSelectedType] = useState("All");
   const [selectedPrice, setSelectedPrice] = useState(0);
@@ -136,6 +25,7 @@ export default function Listings({ subleaseListings = [] }) {
       selectedType === "All" || listing.type === selectedType;
 
     const range = priceRanges[selectedPrice];
+    if (!range) return false;
     const matchesPrice =
       listing.price >= range.min && listing.price <= range.max;
 
@@ -204,7 +94,9 @@ export default function Listings({ subleaseListings = [] }) {
               {housingTypes.map((type) => (
                 <button
                   key={type}
-                  className={`filter-chip-btn ${selectedType === type ? "active" : ""}`}
+                  className={`filter-chip-btn ${
+                    selectedType === type ? "active" : ""
+                  }`}
                   onClick={() => setSelectedType(type)}
                 >
                   {type}
@@ -234,7 +126,9 @@ export default function Listings({ subleaseListings = [] }) {
               {bedOptions.map((bed) => (
                 <button
                   key={bed}
-                  className={`filter-chip-btn ${selectedBeds === bed ? "active" : ""}`}
+                  className={`filter-chip-btn ${
+                    selectedBeds === bed ? "active" : ""
+                  }`}
                   onClick={() => setSelectedBeds(bed)}
                 >
                   {bed === "Any" ? "Any" : `${bed} Bed`}
