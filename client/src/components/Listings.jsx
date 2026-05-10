@@ -1,7 +1,6 @@
 import { useState } from "react";
 
 export default function Listings({
-  subleaseListings = [],
   offCampusListings = [],
   housingTypes = [],
   priceRanges = [],
@@ -13,9 +12,12 @@ export default function Listings({
   const [selectedBeds, setSelectedBeds] = useState("Any");
   const [expandedId, setExpandedId] = useState(null);
 
-  const allListings = [...subleaseListings, ...offCampusListings];
+  // Separate sublease listings for the dedicated hub section
+  const subleaseListings = offCampusListings.filter(
+    (l) => l.type === "Sublease"
+  );
 
-  const filtered = allListings.filter((listing) => {
+  const filtered = offCampusListings.filter((listing) => {
     const matchesSearch =
       listing.title.toLowerCase().includes(search.toLowerCase()) ||
       listing.area.toLowerCase().includes(search.toLowerCase()) ||
