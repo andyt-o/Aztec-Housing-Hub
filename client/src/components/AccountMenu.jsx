@@ -1,4 +1,4 @@
-export default function AccountMenu({ user, onSignOut }) {
+export default function AccountMenu({ user, onSignOut, onNavigateToProfile }) {
   return (
     <div className="account-dropdown">
       <p className="account-dropdown-name">
@@ -6,6 +6,13 @@ export default function AccountMenu({ user, onSignOut }) {
       </p>
       <p className="account-dropdown-email">{user.email}</p>
       <div className="account-dropdown-actions">
+        <button
+          type="button"
+          className="account-dropdown-action"
+          onClick={onNavigateToProfile}
+        >
+          Profile Settings
+        </button>
         <button
           type="button"
           className="account-dropdown-action"

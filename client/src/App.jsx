@@ -12,6 +12,7 @@ import RoommatesPage from "./components/pages/RoommatesPage";
 import LoadingSpinner from "./components/shared/LoadingSpinner";
 import ErrorBanner from "./components/shared/ErrorBanner";
 import { calculateCompatibility } from "./components/shared/compatibility";
+import { checkProfanity } from "./utils/profanity";
 
 // Proxy prefix for Vite dev server (see vite.config.js).
 // In production, the built frontend expects API paths under /api.
@@ -19,6 +20,43 @@ const apiBaseUrl = "/api";
 
 function buildUrl(path) {
   return apiBaseUrl + path;
+}
+
+/**
+ * Censor a single string via the backend profanity endpoint.
+ * Falls back to the raw string if the check fails.
+ */
+async function censorText(text) {
+  if (!text || typeof text !== "string" || !text.trim()) return text;
+  try {
+    const result = await checkProfanity(text);
+    return result.censored || text;
+  } catch {
+    return text;
+  }
+}
+
+/**
+ * Recursively censor all string values in an object or array.
+ * Skips 'id', 'email', 'password', 'hash', 'salt', 'clicks', and numeric fields.
+ */
+async function deepCensor(obj) {
+  if (typeof obj === "string") return await censorText(obj);
+  if (typeof obj !== "object" || obj === null) return obj;
+  if (Array.isArray(obj)) return await Promise.all(obj.map(deepCensor));
+
+  const result = {};
+  const SKIP_KEYS = new Set(["id", "email", "clicks", "password", "salt", "hash"]);
+  for (const [key, value] of Object.entries(obj)) {
+    if (SKIP_KEYS.has(key) && typeof value === "string") {
+      result[key] = value;
+    } else if (typeof value === "string") {
+      result[key] = await censorText(value);
+    } else {
+      result[key] = await deepCensor(value);
+    }
+  }
+  return result;
 }
 
 export default function App() {
@@ -65,9 +103,16 @@ export default function App() {
         const roommates = await roommatesRes.json();
         const config = await configRes.json();
 
-        setOnCampusHousing(listings.onCampus || []);
-        setOffCampusListings(listings.offCampus || []);
-        setRoommateProfiles(roommates || []);
+        // Censor all user-generated text before storing in state (defensive)
+        const safeListings = {
+          onCampus: await deepCensor(listings.onCampus || []),
+          offCampus: await deepCensor(listings.offCampus || []),
+        };
+        const safeRoommates = await deepCensor(roommates || []);
+
+        setOnCampusHousing(safeListings.onCampus);
+        setOffCampusListings(safeListings.offCampus);
+        setRoommateProfiles(safeRoommates);
         setAppConfig(config || {});
         setSignupForm(config.emptySignupForm || {});
         setLoginForm(config.emptyLoginForm || {});
@@ -95,7 +140,10 @@ export default function App() {
   // ── Preferences & user listings ──
   const [preferences, setPreferences] = useState(emptyPreferences);
 
-  const allListings = [...(onCampusHousing || []), ...(offCampusListings || [])];
+  const allListings = [
+    ...(onCampusHousing || []).map((l) => ({ ...l, placement: "onCampus" })),
+    ...(offCampusListings || []).map((l) => ({ ...l, placement: "offCampus" })),
+  ];
 
   const myListings = currentUser
     ? allListings.filter((l) => l.ownerEmail === currentUser.email)
@@ -121,8 +169,10 @@ export default function App() {
     setGlobalMessage({ type: "", text: "" });
   }
 
-  function handleAddListing(listing) {
-    setOffCampusListings((current) => [listing, ...current]);
+  async function handleAddListing(listing) {
+    const safeListing = await deepCensor(listing);
+    safeListing.placement = "offCampus";
+    setOffCampusListings((current) => [safeListing, ...current]);
     setCurrentPage("listings");
   }
 
@@ -179,13 +229,24 @@ export default function App() {
   async function handleUpdateName(firstName, lastName) {
     if (!currentUser) return;
     try {
+      // Check profanity before sending to server
+      const firstCheck = await checkProfanity(firstName);
+      const lastCheck = await checkProfanity(lastName);
+      if (firstCheck.isProfane || lastCheck.isProfane) {
+        setGlobalMessage({
+          type: "error",
+          text: "Name contains inappropriate language.",
+        });
+        return;
+      }
+
       const response = await fetch(buildUrl("/update-name"), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: currentUser.email,
-          firstName: firstName.trim(),
-          lastName: lastName.trim(),
+          firstName: firstCheck.censored,
+          lastName: lastCheck.censored,
         }),
       });
       const data = await response.json();
@@ -392,8 +453,18 @@ export default function App() {
     }
   }
 
-  function handleProfileSave(event) {
+  async function handleProfileSave(event) {
     event.preventDefault();
+
+    // Check profanity on hobbies before saving
+    if (profileForm.hobbies?.trim()) {
+      const check = await checkProfanity(profileForm.hobbies.trim());
+      if (check.isProfane) {
+        setProfileSaveMessage("Hobbies contain inappropriate language and were not saved.");
+        return;
+      }
+    }
+
     setProfileSaveMessage("Roommate profile saved.");
   }
 
@@ -455,7 +526,7 @@ export default function App() {
           />
         );
       case "add-listing":
-        return <AddListing onAddListing={handleAddListing} />;
+        return <AddListing currentUser={currentUser} onAddListing={handleAddListing} />;
       case "auth":
         return (
           <AuthPage

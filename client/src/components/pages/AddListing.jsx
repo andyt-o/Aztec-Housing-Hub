@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { checkProfanity, hasProfanity, censor, validateField } from "../utils/profanity";
 
 const apiBaseUrl = "/api";
 
@@ -100,7 +101,6 @@ const initialForm = {
   availability: "",
   description: "",
   type: "Apartment",
-  ownerEmail: "",
 };
 
 const ZIP_TO_DISTANCE = {
@@ -152,7 +152,7 @@ const ZIP_TO_DISTANCE = {
 
 const listingTypes = ["Apartment", "Room", "House", "Sublease"];
 
-export default function AddListing({ onAddListing }) {
+export default function AddListing({ currentUser, onAddListing }) {
   const [form, setForm] = useState(initialForm);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -248,7 +248,12 @@ export default function AddListing({ onAddListing }) {
     setFieldErrors({});
 
     const errs = {};
-    if (!form.title.trim()) errs.title = "Title is required.";
+    if (!form.title.trim()) {
+      errs.title = "Title is required.";
+    } else {
+      const titleCheck = await checkProfanity(form.title.trim());
+      if (titleCheck.isProfane) errs.title = "Title contains inappropriate language.";
+    }
     if (!form.price) {
       errs.price = "Price is required.";
     } else if (Number(form.price) < 1) {
@@ -280,6 +285,10 @@ export default function AddListing({ onAddListing }) {
         errs.area = "Please enter a valid zipcode from the list.";
       }
     }
+    if (form.description.trim()) {
+      const descCheck = await checkProfanity(form.description.trim());
+      if (descCheck.isProfane) errs.description = "Description contains inappropriate language.";
+    }
 
     if (Object.keys(errs).length > 0) {
       setFieldErrors(errs);
@@ -303,7 +312,7 @@ export default function AddListing({ onAddListing }) {
           description: form.description.trim(),
           type: form.type,
           placement: "offCampus",
-          ownerEmail: (form.ownerEmail || "").trim().toLowerCase(),
+          ownerEmail: (currentUser?.email || "").trim().toLowerCase(),
         }),
       });
 
@@ -493,25 +502,6 @@ export default function AddListing({ onAddListing }) {
                 )}
               </label>
             </div>
-
-            <label>
-              Your SDSU Email
-              <input
-                type="text"
-                value={form.ownerEmail || ""}
-                onChange={(e) =>
-                  setForm((c) => ({ ...c, ownerEmail: e.target.value }))
-                }
-                placeholder="your name"
-                disabled={isSubmitting}
-              />
-              <span className="email-suffix">@sdsu.edu</span>
-              {fieldErrors.ownerEmail && (
-                <small className="field-error">
-                  {fieldErrors.ownerEmail}
-                </small>
-              )}
-            </label>
 
             <label>
               Description

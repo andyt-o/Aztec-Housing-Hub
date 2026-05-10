@@ -12,7 +12,7 @@ export default function Listings({
   const [selectedType, setSelectedType] = useState("All");
   const [selectedPrice, setSelectedPrice] = useState(0);
   const [selectedBeds, setSelectedBeds] = useState("Any");
-  const [expandedId, setExpandedId] = useState(null);
+  const [selectedListing, setSelectedListing] = useState(null);
 
   const subleaseListings = offCampusListings.filter(
     (l) => l.type === "Sublease"
@@ -40,6 +40,15 @@ export default function Listings({
 
     return matchesSearch && matchesType && matchesPrice && matchesBeds;
   });
+
+  function openListing(listing) {
+    onTrackClick(listing.id);
+    setSelectedListing(listing);
+  }
+
+  function closeModal() {
+    setSelectedListing(null);
+  }
 
   return (
     <>
@@ -155,9 +164,15 @@ export default function Listings({
               <article
                 className="listing-card"
                 key={listing.id}
-                onClick={() => {
-                  onTrackClick(listing.id);
-                  setExpandedId(expandedId === listing.id ? null : listing.id);
+                onClick={() => openListing(listing)}
+                role="button"
+                tabIndex={0}
+                aria-label={`View details for ${listing.title}`}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    openListing(listing);
+                  }
                 }}
               >
                 <div className="card-type-badge">{listing.type}</div>
@@ -172,23 +187,116 @@ export default function Listings({
                   {listing.beds} Bed / {listing.baths} Bath
                 </p>
                 <p className="card-availability">{listing.availability}</p>
-
-                {expandedId === listing.id && (
-                  <div className="card-expanded">
-                    <p className="card-description">{listing.description}</p>
-                    <button
-                      className="contact-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        alert("Contact feature coming in Sprint 2!");
-                      }}
-                    >
-                      Contact Lister
-                    </button>
-                  </div>
-                )}
+                <p className="card-description">{listing.description}</p>
+                <div className="card-footer">
+                  <span className="card-clicks">
+                    👁 {listing.clicks || 0}
+                  </span>
+                  <span className="card-contact-hint">Click to contact</span>
+                </div>
               </article>
             ))}
+          </div>
+        )}
+
+        {/* ── Listing Detail Modal ── */}
+        {selectedListing && (
+          <div
+            className="modal-overlay"
+            onClick={closeModal}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Listing details"
+          >
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <button
+                className="modal-close"
+                onClick={closeModal}
+                aria-label="Close modal"
+              >
+                &times;
+              </button>
+
+              <div className="modal-header">
+                <span className="modal-badge">{selectedListing.type}</span>
+                <h3>{selectedListing.title}</h3>
+                <p className="modal-location">
+                  {selectedListing.area} &bull; {selectedListing.distance} mi
+                  from campus
+                </p>
+              </div>
+
+              <div className="modal-body">
+                <div className="modal-details">
+                  <div className="detail-row">
+                    <span className="detail-label">Price</span>
+                    <span className="detail-value">
+                      ${selectedListing.price.toLocaleString()} / month
+                    </span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-label">Bedrooms / Baths</span>
+                    <span className="detail-value">
+                      {selectedListing.beds}bd / {selectedListing.baths}ba
+                    </span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-label">Availability</span>
+                    <span className="detail-value">
+                      {selectedListing.availability}
+                    </span>
+                  </div>
+                </div>
+
+                {selectedListing.description && (
+                  <p className="modal-description">
+                    {selectedListing.description}
+                  </p>
+                )}
+
+                {/* ── Poster Contact Card ── */}
+                <div className="poster-card">
+                  <h4>Contact the Poster</h4>
+                  <div className="poster-info">
+                    <div className="poster-avatar">
+                      {selectedListing.ownerEmail
+                        ? selectedListing.ownerEmail.charAt(0).toUpperCase()
+                        : "?"}
+                    </div>
+                    <div className="poster-meta">
+                      <p className="poster-email">
+                        {selectedListing.ownerEmail ||
+                          "No email available"}
+                      </p>
+                      <p className="poster-note">
+                        Reach out directly via SDSU email to connect.
+                      </p>
+                    </div>
+                  </div>
+                  <a
+                    href={`mailto:${selectedListing.ownerEmail}`}
+                    className="contact-btn"
+                    onClick={(e) => {
+                      if (!selectedListing.ownerEmail || !selectedListing.ownerEmail.includes("@sdsu.edu")) {
+                        e.preventDefault();
+                        alert("This poster has not provided a valid SDSU email yet.");
+                      }
+                    }}
+                  >
+                    📧 Send Email
+                  </a>
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <span className="modal-clicks">
+                  👁 {selectedListing.clicks || 0} views
+                </span>
+                <button className="btn-secondary" onClick={closeModal}>
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </main>

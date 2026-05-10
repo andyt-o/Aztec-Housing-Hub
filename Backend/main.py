@@ -14,6 +14,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from better_profanity import profanity
 
 HOST = "127.0.0.1"
 PORT = 5000
@@ -21,76 +22,29 @@ DATA_DIR = Path(__file__).parent / "data"
 DATA_FILE = Path(__file__).with_name("users.json")
 # [A-Za-z0-9._%+-]@(([A-Za-z0-9-]+\\.)*sdsu\\.edu) — matches sub.sdsu.edu too
 EMAIL_PATTERN = re.compile(
-    r"^[A-Za-z0-9._%+-]+@(?:[A-Za-z0-9-]+\.)*sdsu\.edu$"
+    r"^[A-Za-z0-9._%+-]+@(?:[A-Za-z0-9-]+\\.)*sdsu\\.edu$"
 )
-RED_ID_PATTERN = re.compile(r"^\d{1,9}$")
+RED_ID_PATTERN = re.compile(r"^\\d{1,9}$")
 MAX_BODY_BYTES = 64 * 1024
 USERS_LOCK = threading.RLock()
 DATA_LOCK = threading.RLock()
 DEFAULT_ALLOWED_ORIGINS = {"http://localhost:5173", "http://127.0.0.1:5173"}
 
 # ---------------------------------------------------------------------------
-# Vulgarity filter
+# Vulgarity filter (backed by better-profanity library)
 # ---------------------------------------------------------------------------
-VULGAR_WORDS = {
-    "fuck",
-    "shit",
-    "asshole",
-    "bitch",
-    "bastard",
-    "cunt",
-    "dick",
-    "cock",
-    "pussy",
-    "twat",
-    "nigger",
-    "faggot",
-    "nigga",
-    "slut",
-    "whore",
-    "crap",
-    "damn",
-    "hell",
-    "ass",
-    "dumbass",
-    "motherfucker",
-    "fucker",
-    "penis",
-    "vagina",
-    "tits",
-    "boobs",
-    "piss",
-    "cum",
-    "semen",
-    "dildo",
-    "fag",
-    "retard",
-    "moron",
-    "idiot",
-    "stupid",
-    "ugly",
-    "hoe",
-    "trash",
-    "garbage",
-    "bullshit",
-    "horseshit",
-    "shithead",
-    "shitface",
-    "asswipe",
-    "jerkoff",
-    "wanker",
-    "bollocks",
-    "arse",
-    "bloody",
-    "sod",
-    "bugger",
-}
+# Load the default profanity word list from better-profanity at startup.
+profanity.load_censor_words()
 
 
 def contains_vulgarity(text: str) -> bool:
     """Return True if the text contains any vulgar word (case-insensitive)."""
-    words = re.findall(r"[a-z0-9]+", text.lower())
-    return any(w in VULGAR_WORDS for w in words)
+    return profanity.contains_profanity(text)
+
+
+def censor_text(text: str) -> str:
+    """Censor vulgar words in text, returning a sanitized string."""
+    return profanity.censor(text)
 
 
 def clamp_price(value: int | float) -> int:
@@ -131,6 +85,11 @@ def _save_json(name: str, data: object) -> None:
 def _save_listings(data: dict) -> None:
     """Persist listings data to disk atomically."""
     _save_json("listings.json", data)
+
+
+def _save_roommates(data: list) -> None:
+    """Persist roommates data to disk atomically."""
+    _save_json("roommates.json", data)
 
 
 # ---------------------------------------------------------------------------
@@ -196,6 +155,8 @@ def validate_signup(payload: dict, users: list) -> tuple:
         errors["firstName"] = "First name is required."
     if not last_name:
         errors["lastName"] = "Last name is required."
+    if contains_vulgarity(first_name) or contains_vulgarity(last_name):
+        errors["name"] = "Name contains inappropriate language."
     if not red_id:
         errors["redId"] = "Red ID is required."
     elif not RED_ID_PATTERN.match(red_id):
@@ -256,6 +217,10 @@ class DataHandler(BaseHTTPRequestHandler):
     _POST_ROUTES = {
         "/api/signup": "_handle_signup",
         "/api/login": "_handle_login",
+        "/api/track-click": "_handle_track_click",
+        "/api/add-listing": "_handle_add_listing",
+        "/api/add-roommate": "_handle_add_roommate",
+        "/api/profanity-check": "_handle_profanity_check",
     }
     _PUT_ROUTES = {
         "/api/update-name": "_handle_update_name",
@@ -333,6 +298,17 @@ class DataHandler(BaseHTTPRequestHandler):
 
     # -- POST handlers ------------------------------------------------------
 
+    def _handle_profanity_check(self):
+        """Check a text string for profanity.  Expects {"text": "..."}."""
+        payload = self.read_json()
+        if payload is None:
+            return
+        text = str(payload.get("text", ""))
+        self.respond(200, {
+            "isProfane": profanity.contains_profanity(text),
+            "censored": profanity.censor(text),
+        })
+
     def _handle_signup(self):
         payload = self.read_json()
         if payload is None:
@@ -349,8 +325,8 @@ class DataHandler(BaseHTTPRequestHandler):
             password_data = hash_password(cleaned["password"])
             users.append(
                 {
-                    "firstName": cleaned["firstName"],
-                    "lastName": cleaned["lastName"],
+                    "firstName": censor_text(cleaned["firstName"]),
+                    "lastName": censor_text(cleaned["lastName"]),
                     "redId": cleaned["redId"],
                     "email": cleaned["email"],
                     "password": password_data,
@@ -362,8 +338,8 @@ class DataHandler(BaseHTTPRequestHandler):
             {
                 "message": "Account created successfully.",
                 "user": {
-                    "firstName": cleaned["firstName"],
-                    "lastName": cleaned["lastName"],
+                    "firstName": censor_text(cleaned["firstName"]),
+                    "lastName": censor_text(cleaned["lastName"]),
                     "redId": cleaned["redId"],
                     "email": cleaned["email"],
                 },
@@ -427,23 +403,171 @@ class DataHandler(BaseHTTPRequestHandler):
         if not user:
             self.respond(404, {"message": "User not found."})
             return
-        user["firstName"] = new_first
-        user["lastName"] = new_last
+        user["firstName"] = censor_text(new_first)
+        user["lastName"] = censor_text(new_last)
         save_users(users)
         self.respond(
             200,
             {
                 "message": "Name updated successfully.",
                 "user": {
-                    "firstName": new_first,
-                    "lastName": new_last,
+                    "firstName": user["firstName"],
+                    "lastName": user["lastName"],
                     "redId": user["redId"],
                     "email": user["email"],
                 },
             },
         )
 
-    # -- PUT handler (placeholder for future endpoints) ---- 
+    def _handle_add_listing(self):
+        """Persist a new off-campus listing submitted by a logged-in user."""
+        payload = self.read_json()
+        if payload is None:
+            return
+
+        title = str(payload.get("title", "")).strip()
+        price = payload.get("price")
+        area = str(payload.get("area", "")).strip()
+        beds = payload.get("beds", 0)
+        baths = payload.get("baths", 0)
+        distance = payload.get("distance", 0)
+        availability = str(payload.get("availability", "")).strip()
+        description = str(payload.get("description", "")).strip()
+        listing_type = str(payload.get("type", "Apartment")).strip()
+        placement = str(payload.get("placement", "offCampus")).strip()
+        owner_email = str(payload.get("ownerEmail", "")).strip()
+
+        errors = {}
+        if not title:
+            errors["title"] = "Title is required."
+        elif contains_vulgarity(title):
+            errors["title"] = "Title contains inappropriate language."
+        if not area:
+            errors["area"] = "Area is required."
+        elif contains_vulgarity(area):
+            errors["area"] = "Area contains inappropriate language."
+        if description and contains_vulgarity(description):
+            errors["description"] = "Description contains inappropriate language."
+        if not price or int(price) < 1:
+            errors["price"] = "Price must be at least $1."
+        if not availability:
+            errors["availability"] = "Availability is required."
+        if not listing_type:
+            errors["type"] = "Listing type is required."
+
+        if errors:
+            self.respond(
+                400,
+                {"message": "Please fix the highlighted fields.", "errors": errors},
+            )
+            return
+
+        data = _load_json("listings.json")
+        if data is None:
+            data = {"onCampus": [], "offCampus": []}
+
+        import random
+        new_id = random.randint(1000000000, 9999999999)
+        while any(
+            existing.get("id") == new_id
+            for existing in data.get("onCampus", []) + data.get("offCampus", [])
+        ):
+            new_id = random.randint(1000000000, 9999999999)
+
+        new_listing = {
+            "id": new_id,
+            "title": censor_text(title),
+            "area": censor_text(area),
+            "price": clamp_price(price),
+            "beds": int(beds),
+            "baths": int(baths),
+            "distance": float(distance),
+            "availability": availability,
+            "description": censor_text(description),
+            "type": listing_type,
+            "placement": placement,
+            "ownerEmail": owner_email,
+            "clicks": 0,
+            "url": "#",
+        }
+
+        section = "onCampus" if placement == "onCampus" else "offCampus"
+        data[section].append(new_listing)
+        _save_listings(data)
+
+        self.respond(201, {"message": "Listing created successfully.", "listing": new_listing})
+
+    def _handle_add_roommate(self):
+        """Persist a new roommate profile submitted by a logged-in user."""
+        payload = self.read_json()
+        if payload is None:
+            return
+
+        hobbies = str(payload.get("hobbies", "")).strip()
+        cleanliness = str(payload.get("cleanliness", "")).strip()
+        sleep_schedule = str(payload.get("sleepSchedule", "")).strip()
+        user_email = str(payload.get("email", "")).strip()
+
+        errors = {}
+        if contains_vulgarity(hobbies):
+            errors["hobbies"] = "Hobbies contain inappropriate language."
+
+        if errors:
+            self.respond(
+                400,
+                {"message": "Please fix the highlighted fields.", "errors": errors},
+            )
+            return
+
+        data = _load_json("roommates.json")
+        if data is None:
+            data = []
+
+        import random
+        new_id = random.randint(1000000000, 9999999999)
+        while any(existing.get("id") == new_id for existing in data):
+            new_id = random.randint(1000000000, 9999999999)
+
+        new_profile = {
+            "id": new_id,
+            "email": user_email,
+            "hobbies": censor_text(hobbies),
+            "cleanliness": cleanliness,
+            "sleepSchedule": sleep_schedule,
+        }
+        data.append(new_profile)
+        _save_roommates(data)
+
+        self.respond(201, {"message": "Roommate profile created successfully.", "profile": new_profile})
+
+    def _handle_track_click(self):
+        payload = self.read_json()
+        if payload is None:
+            return
+        listing_id = payload.get("listingId")
+        if listing_id is None:
+            self.respond(400, {"message": "listingId is required."})
+            return
+        data = _load_json("listings.json")
+        if data is None:
+            self.respond(500, {"message": "listings data not found"})
+            return
+        found = False
+        for section in ("onCampus", "offCampus"):
+            for listing in data.get(section, []):
+                if listing.get("id") == listing_id:
+                    listing["clicks"] = (listing.get("clicks") or 0) + 1
+                    found = True
+                    break
+            if found:
+                break
+        if not found:
+            self.respond(404, {"message": "Listing not found."})
+            return
+        _save_listings(data)
+        self.respond(200, {"message": "Click tracked."})
+
+    # -- PUT handler --------------------------------------------------------
 
     # -- HTTP verbs ---------------------------------------------------------
 

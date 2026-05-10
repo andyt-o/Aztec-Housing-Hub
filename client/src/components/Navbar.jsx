@@ -108,13 +108,18 @@ export default function Navbar({
                 <AccountMenu
                   user={currentUser}
                   onSignOut={onSignOut}
+                  onNavigateToProfile={() => {
+                    onNavClick({ preventDefault: () => {} }, "Profile");
+                  }}
                 />
               )}
             </div>
           ) : (
             <button
               type="button"
-              className="account-menu-trigger"
+              className={`account-menu-trigger${
+                currentPage === "auth" ? " auth-active" : ""
+              }`}
               onClick={handleAccountClick}
               aria-label="Login or sign up"
             >

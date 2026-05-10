@@ -158,6 +158,12 @@ img {
   color: var(--accent);
 }
 
+.account-menu-trigger.auth-active {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
 .account-dropdown {
   position: absolute;
   top: calc(100% + 0.6rem);
@@ -889,6 +895,53 @@ img {
   outline-color: #b42318 !important;
 }
 
+/* ── Profile section action buttons ── */
+.form-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.btn-accent {
+  flex: 1;
+  min-width: 120px;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--accent);
+  color: #fff;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.btn-accent:hover {
+  background: #7a1a2b;
+}
+
+.btn-accent:disabled {
+  cursor: wait;
+  opacity: 0.75;
+}
+
+.btn-muted {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--muted);
+  transition: background 0.15s;
+}
+
+.btn-muted:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
 /* ── Roommate page ── */
 .roommate-form {
   display: flex;
@@ -1325,6 +1378,23 @@ img {
 
 .pref-form .auth-field {
   margin-bottom: 0.75rem;
+}
+
+.pref-field-group {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.pref-field-header {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .email-suffix,
@@ -1978,7 +2048,238 @@ img {
   margin-bottom: 0.75rem;
 }
 
-/* ── Collage step indicator fix ── */
+.pref-field-group {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.pref-field-header {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Modal overlay ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-content {
+  background: var(--surface);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  animation: slideUp 0.25s ease;
+  position: relative;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--muted);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.modal-close:hover {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.modal-header {
+  padding: 1.25rem 1.25rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-header h3 {
+  margin: 0.25rem 0 0.15rem;
+  font-size: 1.2rem;
+}
+
+.modal-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--accent);
+  vertical-align: middle;
+}
+
+.modal-location {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.modal-body {
+  padding: 1rem 1.25rem;
+}
+
+.modal-details {
+  background: #fafafa;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.3rem 0;
+}
+
+.detail-row + .detail-row {
+  border-top: 1px solid #eee;
+}
+
+.detail-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.detail-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.modal-description {
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: #444;
+  margin: 0 0 1rem;
+}
+
+/* ── Poster card ── */
+.poster-card {
+  background: #fff8f9;
+  border: 1px solid #edd7dc;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.poster-card h4 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  color: var(--accent);
+}
+
+.poster-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.poster-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.poster-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.poster-email {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #333;
+  word-break: break-all;
+}
+
+.poster-note {
+  margin: 0.15rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* ── Card footer with views ── */
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid #f0f0f0;
+}
+
+.card-clicks {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.card-contact-hint {
+  font-size: 0.78rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.modal-clicks {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* ── Step indicator line ── */
 .step-line {
   width: 40px;
   height: 2px;
@@ -2044,7 +2345,44 @@ img {
     grid-template-columns: 1fr;
   }
 
-  .collage-card:nth-child(3) {
+.collage-card:nth-child(3) {
     grid-column: auto;
+  }
+
+  /* ── Listing Detail Tile (inside recommended modal) ── */
+  .listing-detail-tile {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    background: rgba(255, 255, 255, 0.6);
+    margin-top: 0.75rem;
+  }
+
+  .detail-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.9rem;
+  }
+
+  .detail-row:last-child {
+    border-bottom: none;
+  }
+
+  .detail-label {
+    flex: 0 0 110px;
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  .detail-value {
+    flex: 1;
+    color: var(--text);
+    word-break: break-word;
   }
 }

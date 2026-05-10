@@ -1,5 +1,55 @@
 [
   {
+    "firstName": "Test",
+    "lastName": "User",
+    "redId": "123456789",
+    "email": "testuser@sdsu.edu",
+    "password": {
+      "salt": "wPrkEmtRi4/NkmfDz2i7Ng==",
+      "hash": "Az0fhzSOZkuNsjvgoLiTzSFqxFyI3pLjICKYii79IMs="
+    }
+  },
+  {
+    "firstName": "Jane",
+    "lastName": "Doe",
+    "redId": "987654321",
+    "email": "janedoe@sdsu.edu",
+    "password": {
+      "salt": "vqF+x7CEQLBOpEYigOL4wQ==",
+      "hash": "Q509Pj+A/Ka0x0tv2wwJ4SVA2d6nuIS94PV2eTM/rEA="
+    }
+  },
+  {
+    "firstName": "a",
+    "lastName": "a",
+    "redId": "123456784",
+    "email": "a@sdsu.edu",
+    "password": {
+      "salt": "OQcbWCfBW/tCWZCW9kspNg==",
+      "hash": "8xtv21+xnJm8hUrG73GYMEsI1e/xXuBmysEat5fKHmU="
+    }
+  },
+  {
+    "firstName": "12",
+    "lastName": "123",
+    "redId": "123412452",
+    "email": "123123@sdsu.edu",
+    "password": {
+      "salt": "g8QlSvXEzFtPy9cDGWkGEw==",
+      "hash": "M7FNTxgDR+X9dhSaver7wQ2RKO8BK4wQqwvrdp8Bg40="
+    }
+  },
+  {
+    "firstName": "assd",
+    "lastName": "asd",
+    "redId": "123456782",
+    "email": "asd@sdsu.edu",
+    "password": {
+      "salt": "rD0sQy1yuaxaQ66vPRYanA==",
+      "hash": "eStk60/uAkt5A0X5rz3g5cd9NjSa0Sk6hiT2PMuGGaI="
+    }
+  },
+  {
     "firstName": "Carlos",
     "lastName": "Hernandez",
     "redId": "1234567",

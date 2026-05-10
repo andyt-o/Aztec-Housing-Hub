@@ -1,26 +1,79 @@
+import { useState } from "react";
+import { validateField } from "../utils/profanity";
+
 export default function SignupForm({
   form,
   setForm,
   errors,
+  setErrors,
   onSubmit,
   isSubmitting,
 }) {
+  const [profanityErrs, setProfanityErrs] = useState({});
+
+  const handleChange = (field, value) => {
+    setForm((c) => ({ ...c, [field]: value }));
+    // Clear profanity error when user types
+    if (profanityErrs[field]) {
+      setProfanityErrs((c) => {
+        const next = { ...c };
+        delete next[field];
+        return next;
+      });
+    }
+    // Clear backend errors too
+    if (errors[field]) {
+      setErrors((c) => {
+        const next = { ...c };
+        delete next[field];
+        return next;
+      });
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setProfanityErrs({});
+
+    // Frontend profanity checks on name fields
+    const newErrs = {};
+    if (form.firstName?.trim()) {
+      const result = await validateField(form.firstName, "First name");
+      if (result) newErrs.firstName = result;
+    }
+    if (form.lastName?.trim()) {
+      const result = await validateField(form.lastName, "Last name");
+      if (result) newErrs.lastName = result;
+    }
+
+    if (Object.keys(newErrs).length > 0) {
+      setProfanityErrs(newErrs);
+      return;
+    }
+
+    onSubmit(e);
+  };
+
   return (
-    <form className="auth-form" onSubmit={onSubmit}>
+    <form className="auth-form" onSubmit={handleSubmit}>
       <div className="auth-form-grid">
         <label className="auth-field">
           <span>First Name</span>
           <input
             type="text"
             value={form.firstName}
-            onChange={(e) =>
-              setForm((c) => ({ ...c, firstName: e.target.value }))
-            }
+            onChange={(e) => handleChange("firstName", e.target.value)}
             placeholder="First name"
-            className={errors.firstName ? "field-error-input" : ""}
+            className={
+              errors.firstName || profanityErrs.firstName
+                ? "field-error-input"
+                : ""
+            }
           />
-          {errors.firstName && (
-            <small className="field-error">{errors.firstName}</small>
+          {(errors.firstName || profanityErrs.firstName) && (
+            <small className="field-error">
+              {profanityErrs.firstName || errors.firstName}
+            </small>
           )}
         </label>
         <label className="auth-field">
@@ -28,14 +81,18 @@ export default function SignupForm({
           <input
             type="text"
             value={form.lastName}
-            onChange={(e) =>
-              setForm((c) => ({ ...c, lastName: e.target.value }))
-            }
+            onChange={(e) => handleChange("lastName", e.target.value)}
             placeholder="Last name"
-            className={errors.lastName ? "field-error-input" : ""}
+            className={
+              errors.lastName || profanityErrs.lastName
+                ? "field-error-input"
+                : ""
+            }
           />
-          {errors.lastName && (
-            <small className="field-error">{errors.lastName}</small>
+          {(errors.lastName || profanityErrs.lastName) && (
+            <small className="field-error">
+              {profanityErrs.lastName || errors.lastName}
+            </small>
           )}
         </label>
       </div>
@@ -47,7 +104,7 @@ export default function SignupForm({
           value={form.redId}
           onChange={(e) => {
             const v = e.target.value.replace(/\D/g, "").slice(0, 9);
-            setForm((c) => ({ ...c, redId: v }));
+            handleChange("redId", v);
           }}
           placeholder="9-digit Red ID"
           maxLength={9}
@@ -60,13 +117,15 @@ export default function SignupForm({
 
       <label className="auth-field">
         <span>SDSU Email</span>
-        <div className={`email-input-group${errors.email ? " field-error-input" : ""}`}>
+        <div
+          className={`email-input-group${
+            errors.email ? " field-error-input" : ""
+          }`}
+        >
           <input
             type="text"
             value={form.email}
-            onChange={(e) =>
-              setForm((c) => ({ ...c, email: e.target.value }))
-            }
+            onChange={(e) => handleChange("email", e.target.value)}
             placeholder="your name"
           />
           <span className="email-domain">@sdsu.edu</span>
@@ -82,9 +141,7 @@ export default function SignupForm({
           <input
             type="password"
             value={form.password}
-            onChange={(e) =>
-              setForm((c) => ({ ...c, password: e.target.value }))
-            }
+            onChange={(e) => handleChange("password", e.target.value)}
             placeholder="At least 8 characters"
             className={errors.password ? "field-error-input" : ""}
           />
@@ -97,9 +154,7 @@ export default function SignupForm({
           <input
             type="password"
             value={form.confirmPassword}
-            onChange={(e) =>
-              setForm((c) => ({ ...c, confirmPassword: e.target.value }))
-            }
+            onChange={(e) => handleChange("confirmPassword", e.target.value)}
             placeholder="Re-enter password"
             className={errors.confirmPassword ? "field-error-input" : ""}
           />

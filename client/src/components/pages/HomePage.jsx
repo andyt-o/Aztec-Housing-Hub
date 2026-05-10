@@ -267,8 +267,108 @@ function MetricsPanel({ myListings }) {
   );
 }
 
+/* ── Recommended Listing Detail Modal ── */
+function RecommendedListingModal({ listing, onClose }) {
+  /* Offer contact information for off-campus listings */
+  const isOffCampus = listing.placement === "offCampus";
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        {isOffCampus ? (
+          /* ── Off-Campus: Show poster contact info ── */
+          <>
+            <button className="modal-close" onClick={onClose} aria-label="Close">&times;</button>
+            <h3 style={{ margin: "0 0 0.5rem", color: "var(--accent)" }}>Off-Campus Housing</h3>
+            <p style={{ color: "var(--muted)", fontSize: "0.9rem", margin: "0 0 1rem" }}>{listing.title}</p>
+            <div className="listing-detail-tile">
+              <div className="detail-row">
+                <span className="detail-label">Listed by</span>
+                <span className="detail-value">{listing.ownerEmail || "N/A"}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Area</span>
+                <span className="detail-value">{listing.area}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Price</span>
+                <span className="detail-value">${(listing.price || 0).toLocaleString()}/mo</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Bedrooms / Baths</span>
+                <span className="detail-value">{listing.beds}bd / {listing.baths}ba</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Distance</span>
+                <span className="detail-value">{listing.distance} mi from SDSU</span>
+              </div>
+              {listing.description && (
+                <div className="detail-row">
+                  <span className="detail-label">Description</span>
+                  <span className="detail-value">{listing.description}</span>
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          /* ── On-Campus: Redirect to SDSU site ── */
+          <>
+            <button className="modal-close" onClick={onClose} aria-label="Close">&times;</button>
+            <h3 style={{ margin: "0 0 0.5rem", color: "var(--accent)" }}>On-Campus Housing</h3>
+            <p style={{ color: "var(--muted)", fontSize: "0.9rem", margin: "0 0 1rem" }}>
+              {listing.title}
+            </p>
+            <div className="listing-detail-tile">
+              <div className="detail-row">
+                <span className="detail-label">Building</span>
+                <span className="detail-value">{listing.title}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Area</span>
+                <span className="detail-value">{listing.area}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Bedrooms / Baths</span>
+                <span className="detail-value">{listing.beds}bd / {listing.baths}ba</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Price</span>
+                <span className="detail-value">${(listing.price || 0).toLocaleString()}/mo</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Distance</span>
+                <span className="detail-value">{listing.distance} mi from SDSU</span>
+              </div>
+              {listing.description && (
+                <div className="detail-row">
+                  <span className="detail-label">Description</span>
+                  <span className="detail-value">{listing.description}</span>
+                </div>
+              )}
+            </div>
+            <div style={{ textAlign: "center", marginTop: "1.25rem" }}>
+              <a
+                className="btn-primary"
+                href={listing.url || "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => {
+                  /* Let the <a> navigate naturally, but also track the click */
+                  onClose();
+                }}
+              >
+                View on SDSU Housing Site
+              </a>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ── Dashboard: Updates / Recommended Listings Panel ── */
-function UpdatesPanel({ allListings, preferences, myListings, onTrackClick, myEmail }) {
+function UpdatesPanel({ allListings, preferences, myListings, onTrackClick, onSelectListing, myEmail }) {
   const lookingForHousing = preferences.lookingForHousing !== false;
   const maxPrice = Number(preferences.maxPrice) || 999999;
   const minBeds = Number(preferences.minBeds) || 0;
@@ -293,6 +393,11 @@ function UpdatesPanel({ allListings, preferences, myListings, onTrackClick, myEm
   // Sort by clicks descending (popularity), trim to 6
   recommended.sort((a, b) => (b.clicks || 0) - (a.clicks || 0));
   recommended = recommended.slice(0, 6);
+
+  function handleCardClick(listing) {
+    onTrackClick(listing.id);
+    onSelectListing(listing);
+  }
 
   return (
     <div className="dash-panel">
@@ -326,18 +431,14 @@ function UpdatesPanel({ allListings, preferences, myListings, onTrackClick, myEm
             <div
               key={listing.id}
               className="dash-update-card"
-              onClick={() => {
-                onTrackClick(listing.id);
-                window.open(listing.url || "#", "_blank");
-              }}
+              onClick={() => handleCardClick(listing)}
               role="button"
               tabIndex={0}
               aria-label={`View ${listing.title}`}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  onTrackClick(listing.id);
-                  window.open(listing.url || "#", "_blank");
+                  handleCardClick(listing);
                 }
               }}
             >
@@ -376,105 +477,7 @@ function UpdatesPanel({ allListings, preferences, myListings, onTrackClick, myEm
   );
 }
 
-/* ── Preferences Quick Editor (inline in dashboard) ── */
-function PreferencesBar({ preferences, onUpdate }) {
-  const housingTypes = ["All", "Apartment", "Room", "House", "Sublease"];
-
-  return (
-    <div className="preferences-bar">
-      <div className="pref-row">
-        <label className="pref-check">
-          <input
-            type="checkbox"
-            checked={preferences.lookingForHousing !== false}
-            onChange={(e) =>
-              onUpdate({
-                ...preferences,
-                lookingForHousing: e.target.checked,
-              })
-            }
-          />
-          <span>Looking for housing</span>
-        </label>
-
-        <label className="pref-field">
-          <span>Max Price</span>
-          <input
-            type="number"
-            min="0"
-            value={preferences.maxPrice || ""}
-            onChange={(e) =>
-              onUpdate({
-                ...preferences,
-                maxPrice: Number(e.target.value) || 0,
-              })
-            }
-            placeholder="e.g. 2000"
-          />
-        </label>
-
-        <label className="pref-field">
-          <span>Min Beds</span>
-          <input
-            type="number"
-            min="1"
-            value={preferences.minBeds || ""}
-            onChange={(e) =>
-              onUpdate({
-                ...preferences,
-                minBeds: Number(e.target.value) || 1,
-              })
-            }
-            placeholder="1"
-          />
-        </label>
-      </div>
-
-      <div className="pref-row">
-        <label className="pref-field">
-          <span>Keywords</span>
-          <input
-            type="text"
-            value={preferences.keywords || ""}
-            onChange={(e) =>
-              onUpdate({
-                ...preferences,
-                keywords: e.target.value,
-              })
-            }
-            placeholder="e.g. furnished, pet-friendly"
-          />
-        </label>
-      </div>
-
-      <div className="pref-row pref-types-row">
-        <span className="pref-label">Preferred Types</span>
-        <div className="pref-chips">
-          {housingTypes.map((t) => (
-            <button
-              key={t}
-              type="button"
-              className={`pref-chip${
-                (preferences.preferredTypes || []).includes(t) ? " active" : ""
-              }`}
-              onClick={() => {
-                const current = preferences.preferredTypes || [];
-                const next = current.includes(t)
-                  ? current.filter((x) => x !== t)
-                  : [...current, t];
-                onUpdate({ ...preferences, preferredTypes: next });
-              }}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ── Main HomePage ── */
+/* ── Dashboard: My Listings Panel ── */
 export default function HomePage({
   currentUser,
   myListings,
@@ -485,8 +488,14 @@ export default function HomePage({
   onTrackClick,
   setCurrentPage,
 }) {
+  const [selectedListing, setSelectedListing] = useState(null);
+
   function navigate(page) {
     setCurrentPage(page);
+  }
+
+  function closeListingModal() {
+    setSelectedListing(null);
   }
 
   return (
@@ -595,13 +604,7 @@ export default function HomePage({
 
         {/* Authenticated: Three-panel dashboard */}
         {currentUser && (
-          <>
-            <PreferencesBar
-              preferences={preferences}
-              onUpdate={onUpdatePreferences}
-            />
-
-            <div className="dashboard-grid">
+          <div className="dashboard-grid">
               <MyListingsPanel
                 myListings={myListings}
                 canCreateListing={canCreateListing}
@@ -614,12 +617,20 @@ export default function HomePage({
                 preferences={preferences}
                 myListings={myListings}
                 onTrackClick={onTrackClick}
+                onSelectListing={setSelectedListing}
                 myEmail={currentUser.email}
               />
             </div>
-          </>
-        )}
+          )}
       </main>
+
+      {/* ── Recommended Listing Detail Modal ── */}
+      {selectedListing && (
+        <RecommendedListingModal
+          listing={selectedListing}
+          onClose={closeListingModal}
+        />
+      )}
     </>
   );
 }
