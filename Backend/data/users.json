@@ -1,0 +1,22 @@
+[
+  {
+    "firstName": "Carlos",
+    "lastName": "Hernandez",
+    "redId": "1234567",
+    "email": "carlos.hernandez@sdsu.edu",
+    "password": {
+      "salt": "dGVzdHNhbHQxMjM0NTY3OA==",
+      "hash": "bTpRNFpEVkVOeE5UWTNPRGxCUWtkUFpHbENVMEJIU0RVNU56ZzE="
+    }
+  },
+  {
+    "firstName": "Maria",
+    "lastName": "Garcia",
+    "redId": "7654321",
+    "email": "maria.garcia@sdsu.edu",
+    "password": {
+      "salt": "dGVzdHNhbHQ3Nzg5MDEyMw==",
+      "hash": "bTpRNFpEVkVOeE5UWTNPRGxCUWtkUFpHbENVMEJIU0RVNU56ZzE="
+    }
+  }
+]

@@ -19,16 +19,89 @@ HOST = "127.0.0.1"
 PORT = 5000
 DATA_DIR = Path(__file__).parent / "data"
 DATA_FILE = Path(__file__).with_name("users.json")
-EMAIL_PATTERN = re.compile(r"^[A-Za-z0-9._%+-]+@(?:[A-Za-z0-9-]+\\.)*sdsu\\.edu$")
-RED_ID_PATTERN = re.compile(r"^\\d{9}$")
+# [A-Za-z0-9._%+-]@(([A-Za-z0-9-]+\\.)*sdsu\\.edu) — matches sub.sdsu.edu too
+EMAIL_PATTERN = re.compile(
+    r"^[A-Za-z0-9._%+-]+@(?:[A-Za-z0-9-]+\.)*sdsu\.edu$"
+)
+RED_ID_PATTERN = re.compile(r"^\d{1,9}$")
 MAX_BODY_BYTES = 64 * 1024
 USERS_LOCK = threading.RLock()
 DATA_LOCK = threading.RLock()
 DEFAULT_ALLOWED_ORIGINS = {"http://localhost:5173", "http://127.0.0.1:5173"}
 
 # ---------------------------------------------------------------------------
+# Vulgarity filter
+# ---------------------------------------------------------------------------
+VULGAR_WORDS = {
+    "fuck",
+    "shit",
+    "asshole",
+    "bitch",
+    "bastard",
+    "cunt",
+    "dick",
+    "cock",
+    "pussy",
+    "twat",
+    "nigger",
+    "faggot",
+    "nigga",
+    "slut",
+    "whore",
+    "crap",
+    "damn",
+    "hell",
+    "ass",
+    "dumbass",
+    "motherfucker",
+    "fucker",
+    "penis",
+    "vagina",
+    "tits",
+    "boobs",
+    "piss",
+    "cum",
+    "semen",
+    "dildo",
+    "fag",
+    "retard",
+    "moron",
+    "idiot",
+    "stupid",
+    "ugly",
+    "hoe",
+    "trash",
+    "garbage",
+    "bullshit",
+    "horseshit",
+    "shithead",
+    "shitface",
+    "asswipe",
+    "jerkoff",
+    "wanker",
+    "bollocks",
+    "arse",
+    "bloody",
+    "sod",
+    "bugger",
+}
+
+
+def contains_vulgarity(text: str) -> bool:
+    """Return True if the text contains any vulgar word (case-insensitive)."""
+    words = re.findall(r"[a-z0-9]+", text.lower())
+    return any(w in VULGAR_WORDS for w in words)
+
+
+def clamp_price(value: int | float) -> int:
+    """Clamp price between 25 and 10000."""
+    return max(25, min(10000, int(value)))
+
+
+# ---------------------------------------------------------------------------
 # Static-data helpers
 # ---------------------------------------------------------------------------
+
 
 def _load_json(name: str) -> object:
     """Load a JSON file from the data directory (thread-safe)."""
@@ -36,13 +109,34 @@ def _load_json(name: str) -> object:
     with DATA_LOCK:
         if not path.exists():
             return None
-        with path.open("r", encoding="utf-8") as f:
-            return json.load(f)
+        try:
+            with path.open("r", encoding="utf-8") as f:
+                return json.load(f)
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            return None
+
+
+def _save_json(name: str, data: object) -> None:
+    """Persist a JSON file atomically."""
+    path = DATA_DIR / name
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    with DATA_LOCK:
+        with tmp.open("w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+
+
+def _save_listings(data: dict) -> None:
+    """Persist listings data to disk atomically."""
+    _save_json("listings.json", data)
 
 
 # ---------------------------------------------------------------------------
-# User helpers (unchanged)
+# User helpers
 # ---------------------------------------------------------------------------
+
 
 def load_users() -> list:
     """Load the user list from disk.  Returns [] when missing or invalid."""
@@ -105,7 +199,7 @@ def validate_signup(payload: dict, users: list) -> tuple:
     if not red_id:
         errors["redId"] = "Red ID is required."
     elif not RED_ID_PATTERN.match(red_id):
-        errors["redId"] = "Red ID must be exactly 9 digits."
+        errors["redId"] = "Red ID must be 1-9 digits."
     elif any(user.get("redId") == red_id for user in users):
         errors["redId"] = "That Red ID is already registered."
     if not email:
@@ -148,6 +242,7 @@ def validate_login(payload: dict) -> tuple:
 # HTTP handler
 # ---------------------------------------------------------------------------
 
+
 class DataHandler(BaseHTTPRequestHandler):
     """HTTP handler for auth + static-data endpoints."""
 
@@ -161,6 +256,9 @@ class DataHandler(BaseHTTPRequestHandler):
     _POST_ROUTES = {
         "/api/signup": "_handle_signup",
         "/api/login": "_handle_login",
+    }
+    _PUT_ROUTES = {
+        "/api/update-name": "_handle_update_name",
     }
 
     def __init__(self, *args, **kwargs):
@@ -190,7 +288,7 @@ class DataHandler(BaseHTTPRequestHandler):
     def end_headers(self):
         self._send_cors_headers()
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "no-referrer")
         super().end_headers()
@@ -199,7 +297,12 @@ class DataHandler(BaseHTTPRequestHandler):
 
     def _route(self):
         """Return the handler method name or None."""
-        routes = self._GET_ROUTES if self.command == "GET" else self._POST_ROUTES
+        if self.command == "GET":
+            routes = self._GET_ROUTES
+        elif self.command == "PUT":
+            routes = self._PUT_ROUTES
+        else:
+            routes = self._POST_ROUTES
         return routes.get(self.path)
 
     # -- GET handlers -------------------------------------------------------
@@ -238,26 +341,34 @@ class DataHandler(BaseHTTPRequestHandler):
             users = load_users()
             errors, cleaned = validate_signup(payload, users)
             if errors:
-                self.respond(400, {"message": "Please fix the highlighted fields.", "errors": errors})
+                self.respond(
+                    400,
+                    {"message": "Please fix the highlighted fields.", "errors": errors},
+                )
                 return
             password_data = hash_password(cleaned["password"])
-            users.append({
-                "firstName": cleaned["firstName"],
-                "lastName": cleaned["lastName"],
-                "redId": cleaned["redId"],
-                "email": cleaned["email"],
-                "password": password_data,
-            })
+            users.append(
+                {
+                    "firstName": cleaned["firstName"],
+                    "lastName": cleaned["lastName"],
+                    "redId": cleaned["redId"],
+                    "email": cleaned["email"],
+                    "password": password_data,
+                }
+            )
             save_users(users)
-        self.respond(201, {
-            "message": "Account created successfully.",
-            "user": {
-                "firstName": cleaned["firstName"],
-                "lastName": cleaned["lastName"],
-                "redId": cleaned["redId"],
-                "email": cleaned["email"],
+        self.respond(
+            201,
+            {
+                "message": "Account created successfully.",
+                "user": {
+                    "firstName": cleaned["firstName"],
+                    "lastName": cleaned["lastName"],
+                    "redId": cleaned["redId"],
+                    "email": cleaned["email"],
+                },
             },
-        })
+        )
 
     def _handle_login(self):
         payload = self.read_json()
@@ -265,25 +376,74 @@ class DataHandler(BaseHTTPRequestHandler):
             return
         errors, email, password = validate_login(payload)
         if errors:
-            self.respond(400, {"message": "Please fix the highlighted fields.", "errors": errors})
+            self.respond(
+                400,
+                {"message": "Please fix the highlighted fields.", "errors": errors},
+            )
             return
         users = load_users()
         user = next((u for u in users if u.get("email") == email), None)
         if not user or not verify_password(password, user.get("password", {})):
-            self.respond(401, {
-                "message": "Login failed.",
-                "errors": {"general": "Incorrect email or password."},
-            })
+            self.respond(
+                401,
+                {
+                    "message": "Login failed.",
+                    "errors": {"general": "Incorrect email or password."},
+                },
+            )
             return
-        self.respond(200, {
-            "message": "Login successful.",
-            "user": {
-                "firstName": user["firstName"],
-                "lastName": user["lastName"],
-                "redId": user["redId"],
-                "email": user["email"],
+        self.respond(
+            200,
+            {
+                "message": "Login successful.",
+                "user": {
+                    "firstName": user["firstName"],
+                    "lastName": user["lastName"],
+                    "redId": user["redId"],
+                    "email": user["email"],
+                },
             },
-        })
+        )
+
+    def _handle_update_name(self):
+        payload = self.read_json()
+        if payload is None:
+            return
+        new_first = str(payload.get("firstName", "")).strip()
+        new_last = str(payload.get("lastName", "")).strip()
+        email = str(payload.get("email", "")).strip().lower()
+        if not new_first or not new_last:
+            self.respond(
+                400, {"message": "First name and last name are required."}
+            )
+            return
+        if contains_vulgarity(new_first) or contains_vulgarity(new_last):
+            self.respond(
+                400, {"message": "Name contains inappropriate language."}
+            )
+            return
+        users = load_users()
+        user = next((u for u in users if u.get("email") == email), None)
+        if not user:
+            self.respond(404, {"message": "User not found."})
+            return
+        user["firstName"] = new_first
+        user["lastName"] = new_last
+        save_users(users)
+        self.respond(
+            200,
+            {
+                "message": "Name updated successfully.",
+                "user": {
+                    "firstName": new_first,
+                    "lastName": new_last,
+                    "redId": user["redId"],
+                    "email": user["email"],
+                },
+            },
+        )
+
+    # -- PUT handler (placeholder for future endpoints) ---- 
 
     # -- HTTP verbs ---------------------------------------------------------
 
@@ -299,6 +459,13 @@ class DataHandler(BaseHTTPRequestHandler):
             self.respond(404, {"message": "Not found."})
 
     def do_POST(self):
+        handler = self._route()
+        if handler:
+            getattr(self, handler)()
+        else:
+            self.respond(404, {"message": "Not found."})
+
+    def do_PUT(self):
         handler = self._route()
         if handler:
             getattr(self, handler)()
@@ -346,6 +513,7 @@ class DataHandler(BaseHTTPRequestHandler):
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
+
 
 def run():
     server = ThreadingHTTPServer((HOST, PORT), DataHandler)
