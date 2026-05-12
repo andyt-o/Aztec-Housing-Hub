@@ -75,27 +75,6 @@ export default function ListingsPage({
     }
   }
 
-  // ── Shared search bar (used when only one panel is visible) ──
-  const singleSearch = isBoth ? null : (
-    <div className="filters-bar">
-      <div className="filter-search-row">
-        <div className="filter-search-col">
-          <div className="search-header">Search</div>
-          <input
-            type="text"
-            className="search-input"
-            placeholder="Search by name, area, or keyword..."
-            value={showOnCampus ? onCampusSearch : offCampusSearch}
-            onChange={(e) => {
-              if (showOnCampus) setOnCampusSearch(e.target.value);
-              else setOffCampusSearch(e.target.value);
-            }}
-          />
-        </div>
-      </div>
-    </div>
-  );
-
   // ── FilterSection ──
   function FilterSection({ typeLabel, types, selectedType, onTypeChange, priceKey, bedKey }) {
     const isOnCampus = priceKey === "onCampus";
@@ -167,23 +146,20 @@ export default function ListingsPage({
           </p>
         </div>
 
-        {/* Search — styled like the shared bar when in split view */}
-        {isBoth && (
-          <div className="filters-bar">
-            <div className="filter-search-row">
-              <div className="filter-search-col">
-                <div className="search-header">Search On-Campus</div>
-                <input
-                  type="text"
-                  className="search-input"
-                  placeholder="Search by name, area, or keyword..."
-                  value={onCampusSearch}
-                  onChange={(e) => setOnCampusSearch(e.target.value)}
-                />
-              </div>
+        <div className="filters-bar">
+          <div className="filter-search-row">
+            <div className="filter-search-col">
+              <div className="search-header">Search On-Campus</div>
+              <input
+                type="text"
+                className="search-input"
+                placeholder="Search by name, area, or keyword..."
+                value={onCampusSearch}
+                onChange={(e) => setOnCampusSearch(e.target.value)}
+              />
             </div>
           </div>
-        )}
+        </div>
 
         <FilterSection
           typeLabel="Type"
@@ -246,23 +222,20 @@ export default function ListingsPage({
           </p>
         </div>
 
-        {/* Search — styled like the shared bar when in split view */}
-        {isBoth && (
-          <div className="filters-bar">
-            <div className="filter-search-row">
-              <div className="filter-search-col">
-                <div className="search-header">Search Off-Campus</div>
-                <input
-                  type="text"
-                  className="search-input"
-                  placeholder="Search by name, area, or keyword..."
-                  value={offCampusSearch}
-                  onChange={(e) => setOffCampusSearch(e.target.value)}
-                />
-              </div>
+        <div className="filters-bar">
+          <div className="filter-search-row">
+            <div className="filter-search-col">
+              <div className="search-header">Search Off-Campus</div>
+              <input
+                type="text"
+                className="search-input"
+                placeholder="Search by name, area, or keyword..."
+                value={offCampusSearch}
+                onChange={(e) => setOffCampusSearch(e.target.value)}
+              />
             </div>
           </div>
-        )}
+        </div>
 
         <FilterSection
           typeLabel="Type"
@@ -387,9 +360,6 @@ export default function ListingsPage({
             Off-Campus Housing
           </button>
         </div>
-
-        {/* Shared search bar (single-panel mode only) */}
-        {!isBoth && singleSearch}
 
         {/* ── Listing Panels ── */}
         <div className={`listings-split-layout${isBoth ? " both" : ""}`}>
