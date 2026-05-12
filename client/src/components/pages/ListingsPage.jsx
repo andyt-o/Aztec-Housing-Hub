@@ -10,9 +10,12 @@ export default function ListingsPage({
   setPreferences,
 }) {
   const [search, setSearch] = useState("");
-  const [selectedType, setSelectedType] = useState("All");
-  const [selectedPrice, setSelectedPrice] = useState(0);
-  const [selectedBeds, setSelectedBeds] = useState("Any");
+  const [selectedOnCampusType, setSelectedOnCampusType] = useState("All");
+  const [selectedOffCampusType, setSelectedOffCampusType] = useState("All");
+  const [selectedOnCampusPrice, setSelectedOnCampusPrice] = useState(0);
+  const [selectedOffCampusPrice, setSelectedOffCampusPrice] = useState(0);
+  const [selectedOnCampusBeds, setSelectedOnCampusBeds] = useState("Any");
+  const [selectedOffCampusBeds, setSelectedOffCampusBeds] = useState("Any");
   const [expandedId, setExpandedId] = useState(null);
 
   // Derive placement from the single global preference
@@ -21,45 +24,48 @@ export default function ListingsPage({
   const showOffCampus = placement === "both" || placement === "offCampus";
   const isBoth = placement === "both";
 
-  // Unified type list from both data sources
-  const onCampusDataTypes = [
-    ...new Set(onCampusHousing.map((l) => l.type).filter(Boolean)),
-  ];
-  const offCampusDataTypes = [
-    ...new Set(offCampusListings.map((l) => l.type).filter(Boolean)),
-  ];
-  const allTypes = ["All", ...new Set([...onCampusDataTypes, ...offCampusDataTypes, ...housingTypes])];
+  // Separate type lists for each housing category
+  const onCampusTypes = ["All", ...new Set(onCampusHousing.map((l) => l.type).filter(Boolean))];
+  const offCampusTypes = ["All", ...new Set(offCampusListings.map((l) => l.type).filter(Boolean))];
 
-  // ── Unified search + type filter for on-campus ──
+  // ── On-campus filters ──
   const filteredOnCampus = onCampusHousing.filter((listing) => {
     const q = search.toLowerCase();
     const matchesSearch =
       listing.title.toLowerCase().includes(q) ||
       listing.area.toLowerCase().includes(q) ||
       (listing.description || "").toLowerCase().includes(q);
-    const matchesType = selectedType === "All" || listing.type === selectedType;
-    return matchesSearch && matchesType;
+    const matchesType = selectedOnCampusType === "All" || listing.type === selectedOnCampusType;
+    const range = priceRanges[selectedOnCampusPrice];
+    if (!range) return false;
+    const matchesPrice = listing.price >= range.min && listing.price <= range.max;
+    const matchesBeds =
+      selectedOnCampusBeds === "Any" ||
+      (selectedOnCampusBeds === "4+"
+        ? listing.beds >= 4
+        : listing.beds === Number(selectedOnCampusBeds));
+    return matchesSearch && matchesType && matchesPrice && matchesBeds;
   });
 
   // Separate sublease listings for the dedicated hub section
   const subleaseListings = offCampusListings.filter((l) => l.type === "Sublease");
 
-  // ── Unified search + type + price + beds filter for off-campus ──
+  // ── Off-campus filters ──
   const filteredOffCampus = offCampusListings.filter((listing) => {
     const q = search.toLowerCase();
     const matchesSearch =
       listing.title.toLowerCase().includes(q) ||
       listing.area.toLowerCase().includes(q) ||
       (listing.description || "").toLowerCase().includes(q);
-    const matchesType = selectedType === "All" || listing.type === selectedType;
-    const range = priceRanges[selectedPrice];
+    const matchesType = selectedOffCampusType === "All" || listing.type === selectedOffCampusType;
+    const range = priceRanges[selectedOffCampusPrice];
     if (!range) return false;
     const matchesPrice = listing.price >= range.min && listing.price <= range.max;
     const matchesBeds =
-      selectedBeds === "Any" ||
-      (selectedBeds === "4+"
+      selectedOffCampusBeds === "Any" ||
+      (selectedOffCampusBeds === "4+"
         ? listing.beds >= 4
-        : listing.beds === Number(selectedBeds));
+        : listing.beds === Number(selectedOffCampusBeds));
     return matchesSearch && matchesType && matchesPrice && matchesBeds;
   });
 
@@ -72,7 +78,7 @@ export default function ListingsPage({
   return (
     <>
       {/* ── Red Banner ── */}
-      <div className="page-banner">
+      <div className="page-banner listings-page-banner">
         <div className="page-banner-inner">
           <p className="eyebrow">SDSU Housing Hub</p>
           <h2>Browse Listings</h2>
@@ -106,7 +112,7 @@ export default function ListingsPage({
           </button>
         </div>
 
-        {/* ── Unified Filters ── */}
+        {/* ── Shared Search Bar ── */}
         <div className="filters-bar">
           <div className="filter-search-row">
             <div className="filter-search-col">
@@ -118,55 +124,6 @@ export default function ListingsPage({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-            </div>
-
-            <div className="filter-group">
-              <div className="search-header">Type</div>
-              <div className="filter-chips">
-                {allTypes.map((type) => (
-                  <button
-                    key={type}
-                    className={`filter-chip-btn${selectedType === type ? " active" : ""}`}
-                    onClick={() => setSelectedType(type)}
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="filter-row">
-            <div className="filter-group">
-              <label>Price Range</label>
-              <select
-                className="filter-select"
-                value={selectedPrice}
-                onChange={(e) => setSelectedPrice(Number(e.target.value))}
-              >
-                {priceRanges.map((range, i) => (
-                  <option key={range.label} value={i}>
-                    {range.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="filter-group">
-              <label>Bedrooms</label>
-              <div className="filter-chips">
-                {bedOptions.map((bed) => (
-                  <button
-                    key={bed}
-                    className={`filter-chip-btn${
-                      selectedBeds === bed ? " active" : ""
-                    }`}
-                    onClick={() => setSelectedBeds(bed)}
-                  >
-                    {bed === "Any" ? "Any" : `${bed} Bed`}
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
         </div>
@@ -184,10 +141,62 @@ export default function ListingsPage({
                 </p>
               </div>
 
+              {/* On-Campus Filters */}
+              <div className="panel-filters">
+                <div className="filter-group">
+                  <div className="search-header">Type</div>
+                  <div className="filter-chips">
+                    {onCampusTypes.map((type) => (
+                      <button
+                        key={type}
+                        className={`filter-chip-btn${selectedOnCampusType === type ? " active" : ""}`}
+                        onClick={() => setSelectedOnCampusType(type)}
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="filter-row">
+                  <div className="filter-group">
+                    <label>Price Range</label>
+                    <select
+                      className="filter-select"
+                      value={selectedOnCampusPrice}
+                      onChange={(e) => setSelectedOnCampusPrice(Number(e.target.value))}
+                    >
+                      {priceRanges.map((range, i) => (
+                        <option key={range.label} value={i}>
+                          {range.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="filter-group">
+                    <label>Bedrooms</label>
+                    <div className="filter-chips">
+                      {bedOptions.map((bed) => (
+                        <button
+                          key={bed}
+                          className={`filter-chip-btn${
+                            selectedOnCampusBeds === bed ? " active" : ""
+                          }`}
+                          onClick={() => setSelectedOnCampusBeds(bed)}
+                        >
+                          {bed === "Any" ? "Any" : `${bed} Bed`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {filteredOnCampus.length === 0 ? (
                 <div className="no-results">
                   <p>
-                    {search || selectedType !== "All"
+                    {search || selectedOnCampusType !== "All"
                       ? "No on-campus listings match your filters."
                       : "No on-campus listings available."}
                   </p>
@@ -240,6 +249,58 @@ export default function ListingsPage({
                   {filteredOffCampus.length} housing option
                   {filteredOffCampus.length !== 1 ? "s" : ""} near SDSU
                 </p>
+              </div>
+
+              {/* Off-Campus Filters */}
+              <div className="panel-filters">
+                <div className="filter-group">
+                  <div className="search-header">Type</div>
+                  <div className="filter-chips">
+                    {offCampusTypes.map((type) => (
+                      <button
+                        key={type}
+                        className={`filter-chip-btn${selectedOffCampusType === type ? " active" : ""}`}
+                        onClick={() => setSelectedOffCampusType(type)}
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="filter-row">
+                  <div className="filter-group">
+                    <label>Price Range</label>
+                    <select
+                      className="filter-select"
+                      value={selectedOffCampusPrice}
+                      onChange={(e) => setSelectedOffCampusPrice(Number(e.target.value))}
+                    >
+                      {priceRanges.map((range, i) => (
+                        <option key={range.label} value={i}>
+                          {range.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="filter-group">
+                    <label>Bedrooms</label>
+                    <div className="filter-chips">
+                      {bedOptions.map((bed) => (
+                        <button
+                          key={bed}
+                          className={`filter-chip-btn${
+                            selectedOffCampusBeds === bed ? " active" : ""
+                          }`}
+                          onClick={() => setSelectedOffCampusBeds(bed)}
+                        >
+                          {bed === "Any" ? "Any" : `${bed} Bed`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {subleaseListings.length > 0 && (

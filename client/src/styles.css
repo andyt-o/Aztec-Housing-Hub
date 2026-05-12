@@ -513,8 +513,8 @@ img {
 
 /* ── Section block ── */
 .section-block {
-  margin-bottom: 1.25rem;
-  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  padding: 1.5rem 1.75rem;
   border: 1px solid var(--border);
   background: var(--surface);
 }
@@ -738,7 +738,7 @@ img {
 
 .auth-field input {
   padding: 0.75rem 0.9rem;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid var(--border);
   border-radius: 8px;
   font-size: 0.95rem;
   background: rgba(255, 255, 255, 0.9);
@@ -747,7 +747,7 @@ img {
 
 .auth-field select {
   padding: 0.75rem 0.9rem;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid var(--border);
   border-radius: 8px;
   font-size: 0.95rem;
   background: rgba(255, 255, 255, 0.9);
@@ -1346,7 +1346,7 @@ img {
 
 .pref-field input {
   padding: 0.45rem 0.65rem;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 0.85rem;
   background: rgba(255, 255, 255, 0.8);
@@ -1429,8 +1429,8 @@ img {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 1rem 1.25rem;
-  margin-bottom: 1.25rem;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .pref-form .auth-field {
@@ -1700,8 +1700,16 @@ img {
 }
 
 /* ── Listings page header ── */
-.listings-page-header {
-  margin-bottom: 1rem;
+.listings-page-banner {
+  width: 100%;
+  padding: 2rem 1.5rem;
+  background: var(--accent);
+  color: #fff;
+}
+
+.listings-page-banner .page-banner-inner {
+  max-width: 1100px;
+  margin: 0 auto;
 }
 
 /* ── Listing cards (shared) ── */
@@ -1829,6 +1837,22 @@ img {
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--surface);
+}
+
+.panel-filters {
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.panel-filters .filter-group {
+  margin-bottom: 0.5rem;
+}
+
+.panel-filters .filter-group:last-child {
+  margin-bottom: 0;
 }
 
 .filter-search-col {
@@ -2024,12 +2048,18 @@ img {
 }
 
 /* ── On-campus panel override for filters inside ── */
-.on-campus-panel .filters-bar {
+.on-campus-panel .panel-filters,
+.off-campus-panel .panel-filters {
   margin: 0.75rem 0 1rem;
 }
 
-.on-campus-panel .listing-grid {
+.on-campus-panel .listing-grid,
+.off-campus-panel .listing-grid {
   margin-bottom: 1rem;
+}
+
+.listings-split-layout.both {
+  gap: 1.5rem;
 }
 
 /* ── Step indicator (for process pages) ── */
