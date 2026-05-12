@@ -96,22 +96,7 @@ export default function ListingsPage({
     </div>
   );
 
-  // ── Panel-level search bar (used when both panels are visible) ──
-  function PanelSearch({ value, onChange, label }) {
-    return (
-      <div className="panel-search">
-        <div className="search-header">{label}</div>
-        <input
-          type="text"
-          className="search-input"
-          placeholder={`Search ${label.toLowerCase()}...`}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-        />
-      </div>
-    );
-  }
-
+  // ── FilterSection ──
   function FilterSection({ typeLabel, types, selectedType, onTypeChange, priceKey, bedKey }) {
     const isOnCampus = priceKey === "onCampus";
     const price = isOnCampus ? selectedOnCampusPrice : selectedOffCampusPrice;
@@ -182,8 +167,23 @@ export default function ListingsPage({
           </p>
         </div>
 
-        {/* Search — inside panel when split, above when single */}
-        {isBoth && <PanelSearch value={onCampusSearch} onChange={setOnCampusSearch} label="On-Campus Search" />}
+        {/* Search — styled like the shared bar when in split view */}
+        {isBoth && (
+          <div className="filters-bar">
+            <div className="filter-search-row">
+              <div className="filter-search-col">
+                <div className="search-header">Search On-Campus</div>
+                <input
+                  type="text"
+                  className="search-input"
+                  placeholder="Search by name, area, or keyword..."
+                  value={onCampusSearch}
+                  onChange={(e) => setOnCampusSearch(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         <FilterSection
           typeLabel="Type"
@@ -246,8 +246,23 @@ export default function ListingsPage({
           </p>
         </div>
 
-        {/* Search — inside panel when split, above when single */}
-        {isBoth && <PanelSearch value={offCampusSearch} onChange={setOffCampusSearch} label="Off-Campus Search" />}
+        {/* Search — styled like the shared bar when in split view */}
+        {isBoth && (
+          <div className="filters-bar">
+            <div className="filter-search-row">
+              <div className="filter-search-col">
+                <div className="search-header">Search Off-Campus</div>
+                <input
+                  type="text"
+                  className="search-input"
+                  placeholder="Search by name, area, or keyword..."
+                  value={offCampusSearch}
+                  onChange={(e) => setOffCampusSearch(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         <FilterSection
           typeLabel="Type"

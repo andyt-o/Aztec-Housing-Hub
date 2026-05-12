@@ -2027,7 +2027,8 @@ img {
 }
 
 .listings-split-layout.both {
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
 }
 
 .on-campus-panel,
@@ -2046,33 +2047,6 @@ img {
 .listings-split-layout:not(.both) .off-campus-panel {
   flex: 1 1 100%;
   max-width: 100%;
-}
-
-/* ── Panel-level search (split view) ── */
-.panel-search {
-  padding-bottom: 0.5rem;
-}
-
-.panel-search .search-header {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--accent);
-  margin-bottom: 0.35rem;
-}
-
-.panel-search .search-input {
-  width: 100%;
-  padding: 0.55rem 0.85rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 0.88rem;
-  background: rgba(255, 255, 255, 0.6);
-  color: var(--text);
-}
-
-.panel-search .search-input:focus {
-  outline: 2px solid rgba(157, 34, 53, 0.3);
-  border-color: var(--accent);
 }
 
 /* ── On-campus panel override for filters inside ── */
@@ -2305,17 +2279,12 @@ img {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .collage-card:nth-child(3) {
+.collage-card:nth-child(3) {
     grid-column: 1 / -1;
   }
 
   .roommate-filters {
     grid-template-columns: repeat(2, 1fr);
-  }
-
-  .listings-split-layout.both .on-campus-panel,
-  .listings-split-layout.both .off-campus-panel {
-    flex: 1 1 100%;
   }
 }
 
