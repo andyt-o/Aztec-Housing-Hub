@@ -1,4 +1,4 @@
-export default function RoommateCard({ roommate }) {
+export default function RoommateCard({ roommate, onViewProfile }) {
   return (
     <article className="listing-card">
       <h4>{roommate.name}</h4>
@@ -21,6 +21,13 @@ export default function RoommateCard({ roommate }) {
           Shared interests: {roommate.commonHobbies.join(", ")}
         </p>
       )}
+      <button
+        className="contact-btn"
+        style={{ marginTop: "0.75rem", display: "inline-block", width: "100%" }}
+        onClick={() => onViewProfile(roommate)}
+      >
+        View Roommate Profile
+      </button>
     </article>
   );
 }

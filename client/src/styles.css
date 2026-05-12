@@ -2215,6 +2215,47 @@ img {
 }
 
 /* ── Modal ── */
+/* ── Popup overlay and base ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.15s ease;
+}
+
+.modal-content {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  max-width: 520px;
+  width: 90%;
+  max-height: 85vh;
+  overflow-y: auto;
+  position: relative;
+  animation: slideUp 0.2s ease;
+}
+
+.modal-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--muted);
+  line-height: 1;
+  padding: 0.25rem;
+}
+
+.modal-close:hover {
+  color: var(--accent);
+}
+
 .modal-title {
   margin: 0 0 0.5rem;
   color: var(--accent);
@@ -2255,6 +2296,10 @@ img {
   font-weight: 600;
 }
 
+.modal-contact-email a:hover {
+  text-decoration: underline;
+}
+
 .modal-share-link {
   display: flex;
   flex-direction: column;
@@ -2279,103 +2324,3 @@ img {
 }
 
 /* ── Responsive: tablet and below ── */
-@media (max-width: 800px) {
-  .brand-row,
-  .hero,
-  .auth-hero,
-  .listing-grid,
-  .feature-grid,
-  .collage-grid,
-  .dashboard-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .brand-row {
-    display: block;
-  }
-
-  .top-nav {
-    margin-top: 1rem;
-  }
-
-  .hero-inner {
-    grid-template-columns: 1fr;
-    text-align: center;
-  }
-
-  .hero-buttons {
-    justify-content: center;
-  }
-
-  .auth-hero-inner {
-    grid-template-columns: 1fr;
-  }
-
-  .collage-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-.collage-card:nth-child(3) {
-    grid-column: 1 / -1;
-  }
-
-  .roommate-filters {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 640px) {
-  .site-header,
-  .page-content {
-    width: min(1100px, calc(100% - 1rem));
-  }
-
-  .auth-form-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .collage-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .collage-card:nth-child(3) {
-    grid-column: auto;
-  }
-
-  /* ── Listing Detail Tile (inside recommended modal) ── */
-  .listing-detail-tile {
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 1rem 1.25rem;
-    background: rgba(255, 255, 255, 0.6);
-    margin-top: 0.75rem;
-  }
-
-  .detail-row {
-    display: flex;
-    align-items: baseline;
-    gap: 0.75rem;
-    padding: 0.4rem 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 0.9rem;
-  }
-
-  .detail-row:last-child {
-    border-bottom: none;
-  }
-
-  .detail-label {
-    flex: 0 0 110px;
-    font-weight: 600;
-    color: var(--muted);
-    font-size: 0.82rem;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-  }
-
-  .detail-value {
-    flex: 1;
-    color: var(--text);
-    word-break: break-word;
-  }
-}

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { ContactListerPopup } from "../popups";
 
 const COLLAGE_STEPS = [
   {
@@ -110,9 +111,10 @@ function MyListingsPanel({ myListings, canCreateListing, navigateTo }) {
 
       {myListings.length === 0 ? (
         <div className="dash-empty">
-          <p>No listings yet.</p>
+          <p style={{ opacity: 0.7 }}>No listings yet.</p>
           <button
             className="btn-primary"
+            style={{ background: "#9d2235", color: "#fff", border: "none", padding: "0.5rem 1.25rem", borderRadius: 6, cursor: "pointer", fontWeight: 600 }}
             onClick={() => navigateTo("add-listing")}
             disabled={!canCreateListing}
           >
@@ -136,6 +138,7 @@ function MyListingsPanel({ myListings, canCreateListing, navigateTo }) {
               <div className="dash-listing-actions">
                 <button
                   className="btn-secondary"
+                  style={{ fontSize: "0.8rem", padding: "0.3rem 0.7rem" }}
                   onClick={() => navigateTo("listings")}
                 >
                   View
@@ -149,7 +152,17 @@ function MyListingsPanel({ myListings, canCreateListing, navigateTo }) {
       {canCreateListing && myListings.length > 0 && (
         <button
           className="btn-primary"
-          style={{ width: "100%", marginTop: "0.75rem" }}
+          style={{
+            width: "100%",
+            marginTop: "0.75rem",
+            background: "#9d2235",
+            color: "#fff",
+            border: "none",
+            padding: "0.6rem",
+            borderRadius: 6,
+            cursor: "pointer",
+            fontWeight: 600,
+          }}
           onClick={() => navigateTo("add-listing")}
         >
           + Add Listing ({myListings.length}/3)
@@ -176,7 +189,7 @@ function MetricsPanel({ myListings }) {
           <h3>Listing Metrics</h3>
         </div>
         <div className="dash-empty">
-          <p>No metrics yet — create a listing first.</p>
+          <p style={{ opacity: 0.7 }}>No metrics yet — create a listing first.</p>
         </div>
       </div>
     );
@@ -229,8 +242,7 @@ function MetricsPanel({ myListings }) {
               .sort((a, b) => (b.clicks || 0) - (a.clicks || 0))
               .map((l, i) => (
                 <li key={l.id}>
-                  <strong>#{i + 1}</strong> &mdash; "{l.title}" ({l.clicks}{" "}
-                  clicks)
+                  <strong>#{i + 1}</strong> &mdash; "{l.title}" ({l.clicks} clicks)
                 </li>
               ))}
           </ul>
@@ -242,106 +254,8 @@ function MetricsPanel({ myListings }) {
   );
 }
 
-/* ── Recommended Listing Detail Modal ── */
-const DETAIL_ROWS = {
-  offCampus: [
-    { label: "Listed by", key: "ownerEmail", fallback: "N/A" },
-    { label: "Area", key: "area" },
-    { label: "Price", key: "price", format: true },
-    { label: "Bedrooms / Baths", key: "beds", plural: "baths" },
-    { label: "Distance", key: "distance", suffix: " mi from SDSU" },
-    { label: "Availability", key: "availability" },
-  ],
-  onCampus: [
-    { label: "Building", key: "title", useTitle: true },
-    { label: "Area", key: "area" },
-    { label: "Bedrooms / Baths", key: "beds", plural: "baths" },
-    { label: "Availability", key: "availability" },
-    { label: "Price", key: "price", format: true },
-    { label: "Distance", key: "distance", suffix: " mi from SDSU" },
-  ],
-};
-
-function DetailRow({ label, value }) {
-  return (
-    <div className="detail-row">
-      <span className="detail-label">{label}</span>
-      <span className="detail-value">{value}</span>
-    </div>
-  );
-}
-
-function RecommendedListingModal({ listing, onClose }) {
-  const isOffCampus = listing.placement === "offCampus";
-  const label = isOffCampus ? "Off-Campus Housing" : "On-Campus Housing";
-  const rows = isOffCampus ? DETAIL_ROWS.offCampus : DETAIL_ROWS.onCampus;
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose} aria-label="Close">
-          &times;
-        </button>
-        <h3 className="modal-title">{label}</h3>
-        <p className="modal-subtitle">{listing.title}</p>
-        <div className="listing-detail-tile">
-          {rows.map((row) => {
-            let value;
-            if (row.useTitle) {
-              value = listing.title;
-            } else if (row.format) {
-              value = `$${(listing[row.key] || 0).toLocaleString()}/mo`;
-            } else if (row.plural) {
-              value = `${listing[row.key]}bd / ${listing[row.plural]}ba`;
-            } else if (row.suffix) {
-              value = `${listing[row.key]} ${row.suffix}`;
-            } else {
-              value = listing[row.key] || "N/A";
-            }
-            return <DetailRow key={row.label} label={row.label} value={value} />;
-          })}
-          {listing.description && (
-            <DetailRow label="Description" value={listing.description} />
-          )}
-        </div>
-        {!isOffCampus ? (
-          <div className="modal-cta">
-            <a
-              className="contact-btn"
-              style={{ display: "inline-block", textDecoration: "none" }}
-              href={listing.url || "#"}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={onClose}
-            >
-              View on SDSU Housing Site &#8599;
-            </a>
-          </div>
-        ) : (
-          <div className="modal-contact-section">
-            <h4>Contact Poster</h4>
-            <p className="modal-contact-email">
-              <a href={`mailto:${listing.ownerEmail}`}>{listing.ownerEmail || "N/A"}</a>
-            </p>
-            <div className="modal-share-link">
-              <label>Share this listing:</label>
-              <input
-                type="text"
-                value={`${window.location.origin}#off-campus-${listing.id}`}
-                readOnly
-                onClick={(e) => e.target.select()}
-                className="share-link-input"
-              />
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 /* ── Dashboard: Updates / Recommended Listings Panel ── */
-function UpdatesPanel({ allListings, preferences, myListings, onTrackClick, onSelectListing, navigateTo }) {
+function UpdatesPanel({ allListings, preferences, myListings, onTrackClick, onSelectListing }) {
   const lookingForHousing = preferences.lookingForHousing !== false;
   const maxPrice = Number(preferences.maxPrice) || 999999;
   const minBeds = Number(preferences.minBeds) || 0;
@@ -367,9 +281,13 @@ function UpdatesPanel({ allListings, preferences, myListings, onTrackClick, onSe
   recommended.sort((a, b) => (b.clicks || 0) - (a.clicks || 0));
   recommended = recommended.slice(0, 6);
 
-  function handleCardClick(listing) {
+  function handleCardClick(listing, e) {
     onTrackClick(listing.id);
-    onSelectListing(listing);
+    if (listing.placement === "onCampus" && listing.url) {
+      window.open(listing.url, "_blank", "noopener,noreferrer");
+    } else {
+      onSelectListing(listing);
+    }
   }
 
   return (
@@ -453,6 +371,7 @@ export default function HomePage({
   preferences,
   allListings,
   onTrackClick,
+  onSelectListing,
   navigateTo,
 }) {
   const [selectedListing, setSelectedListing] = useState(null);
@@ -488,7 +407,11 @@ export default function HomePage({
                 <div className="hero-buttons-vertical">
                   <button
                     className="btn-primary"
-                    style={{ background: "#fff", color: "#9d2235", border: "none" }}
+                    style={{
+                      background: "#fff",
+                      color: "#9d2235",
+                      border: "none",
+                    }}
                     onClick={() => navigateTo("add-listing")}
                     disabled={!canCreateListing}
                   >
@@ -549,7 +472,7 @@ export default function HomePage({
             <MyListingsPanel
               myListings={myListings}
               canCreateListing={canCreateListing}
-              navigate={navigateTo}
+              navigateTo={navigateTo}
             />
             <MetricsPanel myListings={myListings} />
             <UpdatesPanel
@@ -564,9 +487,9 @@ export default function HomePage({
         )}
       </main>
 
-      {/* ── Recommended Listing Detail Modal ── */}
+      {/* ── Contact Lister Popup for off-campus recommended tiles ── */}
       {selectedListing && (
-        <RecommendedListingModal
+        <ContactListerPopup
           listing={selectedListing}
           onClose={closeListingModal}
         />

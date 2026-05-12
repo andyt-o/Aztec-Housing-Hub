@@ -1,6 +1,7 @@
 import { useState } from "react";
 import RoommateFilters from "../roommates/RoommateFilters";
 import RoommateCard from "../roommates/RoommateCard";
+import RoommatePopup from "../popups/RoommatePopup";
 import { normalizeHobbies } from "../shared/compatibility";
 
 export default function RoommatesPage({
@@ -14,6 +15,7 @@ export default function RoommatesPage({
   const [filterSleep, setFilterSleep] = useState("Any");
   const [filterHobby, setFilterHobby] = useState("");
   const [minimumMatch, setMinimumMatch] = useState(0);
+  const [selectedRoommate, setSelectedRoommate] = useState(null);
 
   const roommateMatches = roommateProfiles
     .map((roommate) => {
@@ -79,12 +81,23 @@ export default function RoommatesPage({
               </article>
             ) : (
               roommateMatches.map((roommate) => (
-                <RoommateCard key={roommate.id} roommate={roommate} />
+                <RoommateCard
+                  key={roommate.id}
+                  roommate={roommate}
+                  onViewProfile={setSelectedRoommate}
+                />
               ))
             )}
           </div>
         </section>
       </main>
+
+      {selectedRoommate && (
+        <RoommatePopup
+          roommate={selectedRoommate}
+          onClose={() => setSelectedRoommate(null)}
+        />
+      )}
     </>
   );
 }
