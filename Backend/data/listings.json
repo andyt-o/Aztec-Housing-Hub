@@ -316,5 +316,22 @@
       "url": "https://housing.sdsu.edu/communities/zapotec"
     }
   ],
-  "offCampus": []
+  "offCampus": [
+    {
+      "id": 9409765756,
+      "title": "asd",
+      "area": "San Diego",
+      "price": 123,
+      "beds": 1,
+      "baths": 1,
+      "distance": 5.0,
+      "availability": "2026-05-13",
+      "description": "123",
+      "type": "Apartment",
+      "placement": "offCampus",
+      "ownerEmail": "asd@sdsu.edu",
+      "clicks": 0,
+      "url": "#"
+    }
+  ]
 }

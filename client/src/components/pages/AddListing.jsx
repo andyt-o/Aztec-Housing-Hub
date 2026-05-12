@@ -50,9 +50,10 @@ function CalendarWidget({ selectedDate, onChange, onClose }) {
     else setViewMonth((m) => m + 1);
   }
 
-  function isDisabled(day) {
-    const d = new Date(viewYear, viewMonth, day);
-    const t = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+function isDisabled(day) {
+    const d = Date.UTC(viewYear, viewMonth, day);
+    const today = new Date();
+    const t = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
     return d < t;
   }
 
@@ -271,7 +272,7 @@ export default function AddListing({ currentUser, onAddListing }) {
         const parsed = new Date(iso);
         if (isNaN(parsed.getTime())) {
           errs.availability = "Please enter a valid date.";
-        } else if (parsed < new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())) {
+        } else if (parsed < new Date(Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()))) {
           errs.availability = "Date cannot be in the past.";
         }
       }
