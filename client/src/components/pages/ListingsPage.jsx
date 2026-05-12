@@ -77,14 +77,6 @@ export default function ListingsPage({
     }
   }
 
-  function openListing(listing) {
-    if (listing.placement === "onCampus") {
-      window.open(listing.url || "https://housing.sdsu.edu/communities", "_blank", "noopener,noreferrer");
-    } else {
-      setSelectedListing(listing);
-    }
-  }
-
   // ── FilterSection ──
   function FilterSection({ typeLabel, types, selectedType, onTypeChange, priceKey, bedKey }) {
     const isOnCampus = priceKey === "onCampus";
@@ -185,7 +177,7 @@ export default function ListingsPage({
             )}
           </div>
           <div className="modal-contact-section">
-            <h4>Contact</h4>
+            <h4>Contact Poster</h4>
             <p className="modal-contact-email">
               <a href={`mailto:${listing.ownerEmail}`}>{listing.ownerEmail || "N/A"}</a>
             </p>
@@ -251,20 +243,7 @@ export default function ListingsPage({
         ) : (
           <div className="listing-grid">
             {filteredOnCampus.map((listing) => (
-              <article
-                className="listing-card"
-                key={listing.id}
-                onClick={() => openListing(listing)}
-                role="button"
-                tabIndex={0}
-                aria-label={`View ${listing.title} on SDSU Housing`}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    openListing(listing);
-                  }
-                }}
-              >
+              <article className="listing-card" key={listing.id}>
                 <div className="card-type-badge">{listing.type || "Traditional"}</div>
                 <h4>{listing.title}</h4>
                 <p className="card-meta">{listing.area}</p>
@@ -277,7 +256,6 @@ export default function ListingsPage({
                   href={listing.url || "https://housing.sdsu.edu/communities"}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
                 >
                   View on SDSU Housing &#8599;
                 </a>
@@ -340,20 +318,7 @@ export default function ListingsPage({
             </p>
             <div className="listing-grid">
               {subleaseListings.map((listing) => (
-                <article
-                  className="listing-card"
-                  key={listing.id}
-                  onClick={() => openListing(listing)}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`View ${listing.title}`}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      openListing(listing);
-                    }
-                  }}
-                >
+                <article className="listing-card" key={listing.id}>
                   <div className="card-type-badge">Sublease</div>
                   <h4>{listing.title}</h4>
                   <p className="card-meta">
@@ -363,6 +328,13 @@ export default function ListingsPage({
                     {listing.beds} Bed / {listing.baths} Bath
                   </p>
                   <p className="card-description">{listing.description}</p>
+                  <button
+                    className="contact-btn"
+                    style={{ marginTop: "0.75rem", display: "inline-block", width: "100%" }}
+                    onClick={() => setSelectedListing(listing)}
+                  >
+                    Contact Lister
+                  </button>
                 </article>
               ))}
             </div>
@@ -376,20 +348,7 @@ export default function ListingsPage({
         ) : (
           <div className="listing-grid">
             {filteredOffCampus.map((listing) => (
-              <article
-                className="listing-card"
-                key={listing.id}
-                onClick={() => openListing(listing)}
-                role="button"
-                tabIndex={0}
-                aria-label={`View ${listing.title}`}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    openListing(listing);
-                  }
-                }}
-              >
+              <article className="listing-card" key={listing.id}>
                 <div className="card-type-badge">{listing.type}</div>
                 <h4>{listing.title}</h4>
                 <p className="card-meta">
@@ -398,6 +357,13 @@ export default function ListingsPage({
                 <p className="card-meta">
                   {listing.beds} Bed / {listing.baths} Bath
                 </p>
+                <button
+                  className="contact-btn"
+                  style={{ marginTop: "0.75rem", display: "inline-block", width: "100%" }}
+                  onClick={() => setSelectedListing(listing)}
+                >
+                  Contact Lister
+                </button>
               </article>
             ))}
           </div>

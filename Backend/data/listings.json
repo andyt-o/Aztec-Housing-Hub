@@ -12,7 +12,7 @@
       "availability": "290 units available",
       "description": "Traditional-style first-year residence hall with triple-occupancy rooms (limited doubles). Co-ed by room with communal restrooms. Located near Tony Gwynn Stadium. Amenities include 24/7 front desk, AC, meal plan, community kitchen, furnished rooms, and utilities included.",
       "url": "https://housing.sdsu.edu/communities/chappy",
-      "clicks": 8
+      "clicks": 10
     },
     {
       "id": 1000000002,
@@ -26,7 +26,7 @@
       "availability": "380 units available",
       "description": "Traditional-style first-year residence hall with triple-occupancy rooms (limited quads, doubles, and singles). Co-ed by room with communal restrooms. Located near Tony Gwynn Stadium. Shares a courtyard with Chapultepec featuring an Aztec Market, coffee shop, shuffleboard, basketball court, and BBQs.",
       "url": "https://housing.sdsu.edu/communities/huaxyacac",
-      "clicks": 5
+      "clicks": 6
     },
     {
       "id": 1000000003,
@@ -67,7 +67,8 @@
       "price": 1050,
       "availability": "Part of 320-unit complex (North & South towers)",
       "description": "Suite-style first-year and sophomore community. Triple and double-occupancy rooms. Co-ed by room with private restroom shared by suitemates. Features outdoor patio with fire pits, lounge seating and BBQs.",
-      "url": "https://housing.sdsu.edu/communities/south-campus-plaza"
+      "url": "https://housing.sdsu.edu/communities/south-campus-plaza",
+      "clicks": 1
     },
     {
       "id": 1000000006,

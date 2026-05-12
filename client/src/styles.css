@@ -2232,6 +2232,52 @@ img {
   margin-top: 1.25rem;
 }
 
+.modal-contact-section {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.modal-contact-section h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  color: var(--accent);
+}
+
+.modal-contact-email {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+}
+
+.modal-contact-email a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.modal-share-link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.share-link-input {
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.82rem;
+  color: var(--text);
+  background: var(--bg-alt);
+  cursor: pointer;
+}
+
+.share-link-input:hover {
+  border-color: var(--accent);
+}
+
 /* ── Responsive: tablet and below ── */
 @media (max-width: 800px) {
   .brand-row,

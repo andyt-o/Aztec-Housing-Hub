@@ -304,17 +304,35 @@ function RecommendedListingModal({ listing, onClose }) {
             <DetailRow label="Description" value={listing.description} />
           )}
         </div>
-        {!isOffCampus && (
+        {!isOffCampus ? (
           <div className="modal-cta">
             <a
-              className="btn-primary"
+              className="contact-btn"
+              style={{ display: "inline-block", textDecoration: "none" }}
               href={listing.url || "#"}
               target="_blank"
               rel="noopener noreferrer"
               onClick={onClose}
             >
-              View on SDSU Housing Site
+              View on SDSU Housing Site &#8599;
             </a>
+          </div>
+        ) : (
+          <div className="modal-contact-section">
+            <h4>Contact Poster</h4>
+            <p className="modal-contact-email">
+              <a href={`mailto:${listing.ownerEmail}`}>{listing.ownerEmail || "N/A"}</a>
+            </p>
+            <div className="modal-share-link">
+              <label>Share this listing:</label>
+              <input
+                type="text"
+                value={`${window.location.origin}#off-campus-${listing.id}`}
+                readOnly
+                onClick={(e) => e.target.select()}
+                className="share-link-input"
+              />
+            </div>
           </div>
         )}
       </div>
