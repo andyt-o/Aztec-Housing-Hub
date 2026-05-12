@@ -24,9 +24,9 @@ export default function ListingsPage({
   const showOffCampus = placement === "both" || placement === "offCampus";
   const isBoth = placement === "both";
 
-  // Separate type lists for each housing category
+// Derive on-campus types from data, off-campus types from config (since data may be empty)
   const onCampusTypes = ["All", ...new Set(onCampusHousing.map((l) => l.type).filter(Boolean))];
-  const offCampusTypes = ["All", ...new Set(offCampusListings.map((l) => l.type).filter(Boolean))];
+  const offCampusTypes = housingTypes.length > 0 ? housingTypes : ["All", ...new Set(offCampusListings.map((l) => l.type).filter(Boolean))];
 
   // ── On-campus filters ──
   const filteredOnCampus = onCampusHousing.filter((listing) => {

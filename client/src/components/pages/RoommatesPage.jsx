@@ -69,7 +69,7 @@ export default function RoommatesPage({
             sleepScheduleOptions={sleepScheduleOptions}
           />
 
-          <div className="roommate-grid">
+          <div className="roommate-grid" style={{ marginTop: "1rem" }}>
             {roommateMatches.length === 0 ? (
               <article className="listing-card">
                 <h4>No roommates match these filters</h4>

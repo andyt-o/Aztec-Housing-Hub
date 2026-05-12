@@ -323,7 +323,7 @@ function RecommendedListingModal({ listing, onClose }) {
 }
 
 /* ── Dashboard: Updates / Recommended Listings Panel ── */
-function UpdatesPanel({ allListings, preferences, myListings, onTrackClick, onSelectListing }) {
+function UpdatesPanel({ allListings, preferences, myListings, onTrackClick, onSelectListing, navigateTo }) {
   const lookingForHousing = preferences.lookingForHousing !== false;
   const maxPrice = Number(preferences.maxPrice) || 999999;
   const minBeds = Number(preferences.minBeds) || 0;
@@ -360,7 +360,8 @@ function UpdatesPanel({ allListings, preferences, myListings, onTrackClick, onSe
         <h3>Recommended for You</h3>
         <button
           className="btn-link"
-          title="Preferences are set in your Profile"
+          onClick={() => navigateTo("profile")}
+          title="Go to Profile to adjust your preferences"
         >
           ⚙️
         </button>
@@ -413,7 +414,11 @@ function UpdatesPanel({ allListings, preferences, myListings, onTrackClick, onSe
 
       {recommended.length > 0 && (
         <div className="dash-updates-cta">
-          <button className="btn-secondary" title="Preferences are set in your Profile">
+          <button
+            className="btn-secondary"
+            onClick={() => navigateTo("profile")}
+            title="Adjust your preferences in Profile"
+          >
             Refine Preferences in Profile
           </button>
         </div>
@@ -535,6 +540,7 @@ export default function HomePage({
               myListings={myListings}
               onTrackClick={onTrackClick}
               onSelectListing={setSelectedListing}
+              navigateTo={navigateTo}
             />
           </div>
         )}

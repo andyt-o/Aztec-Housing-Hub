@@ -987,6 +987,7 @@ img {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.9rem;
+  margin-top: 0.75rem;
 }
 
 .roommate-grid {
@@ -2050,7 +2051,10 @@ img {
 /* ── On-campus panel override for filters inside ── */
 .on-campus-panel .panel-filters,
 .off-campus-panel .panel-filters {
-  margin: 0.75rem 0 1rem;
+  margin: 1rem 0 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.35);
+  border-radius: 8px;
 }
 
 .on-campus-panel .listing-grid,
