@@ -21,7 +21,9 @@ export default function ListingsPage({
   const [selectedOffCampusPrice, setSelectedOffCampusPrice] = useState(0);
   const [selectedOnCampusBeds, setSelectedOnCampusBeds] = useState("Any");
   const [selectedOffCampusBeds, setSelectedOffCampusBeds] = useState("Any");
-  const [expandedId, setExpandedId] = useState(null);
+
+  // ── Modal state ──
+  const [selectedListing, setSelectedListing] = useState(null);
 
   // ── Placement from global preference ──
   const placement = preferences.housingPlacement || "both";
@@ -72,6 +74,14 @@ export default function ListingsPage({
   function handlePlacementChange(value) {
     if (setPreferences) {
       setPreferences((c) => ({ ...c, housingPlacement: value }));
+    }
+  }
+
+  function openListing(listing) {
+    if (listing.placement === "onCampus") {
+      window.open(listing.url || "https://housing.sdsu.edu/communities", "_blank", "noopener,noreferrer");
+    } else {
+      setSelectedListing(listing);
     }
   }
 
@@ -135,6 +145,66 @@ export default function ListingsPage({
     );
   }
 
+  function ContactModal({ listing, onClose }) {
+    return (
+      <div className="modal-overlay" onClick={onClose}>
+        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <button className="modal-close" onClick={onClose} aria-label="Close">&times;</button>
+          <h3 className="modal-title">Off-Campus Housing</h3>
+          <p className="modal-subtitle">{listing.title}</p>
+          <div className="listing-detail-tile">
+            <div className="detail-row">
+              <span className="detail-label">Listed by</span>
+              <span className="detail-value">{listing.ownerEmail || "N/A"}</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Area</span>
+              <span className="detail-value">{listing.area}</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Price</span>
+              <span className="detail-value">${(listing.price || 0).toLocaleString()}/mo</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Bedrooms / Baths</span>
+              <span className="detail-value">{listing.beds}bd / {listing.baths}ba</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Distance</span>
+              <span className="detail-value">{listing.distance} mi from SDSU</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Availability</span>
+              <span className="detail-value">{listing.availability}</span>
+            </div>
+            {listing.description && (
+              <div className="detail-row">
+                <span className="detail-label">Description</span>
+                <span className="detail-value">{listing.description}</span>
+              </div>
+            )}
+          </div>
+          <div className="modal-contact-section">
+            <h4>Contact</h4>
+            <p className="modal-contact-email">
+              <a href={`mailto:${listing.ownerEmail}`}>{listing.ownerEmail || "N/A"}</a>
+            </p>
+            <div className="modal-share-link">
+              <label>Share this listing:</label>
+              <input
+                type="text"
+                value={`${window.location.origin}#off-campus-${listing.id}`}
+                readOnly
+                onClick={(e) => e.target.select()}
+                className="share-link-input"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   function OnCampusPanel() {
     return (
       <div className={`on-campus-panel${isBoth ? " half" : " full"}`}>
@@ -181,7 +251,20 @@ export default function ListingsPage({
         ) : (
           <div className="listing-grid">
             {filteredOnCampus.map((listing) => (
-              <article className="listing-card" key={listing.id}>
+              <article
+                className="listing-card"
+                key={listing.id}
+                onClick={() => openListing(listing)}
+                role="button"
+                tabIndex={0}
+                aria-label={`View ${listing.title} on SDSU Housing`}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    openListing(listing);
+                  }
+                }}
+              >
                 <div className="card-type-badge">{listing.type || "Traditional"}</div>
                 <h4>{listing.title}</h4>
                 <p className="card-meta">{listing.area}</p>
@@ -189,11 +272,12 @@ export default function ListingsPage({
                   {listing.beds} Bed / {listing.baths} Bath
                 </p>
                 <a
+                  className="contact-btn"
+                  style={{ marginTop: "0.75rem", display: "inline-block" }}
                   href={listing.url || "https://housing.sdsu.edu/communities"}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="contact-btn"
-                  style={{ marginTop: "0.5rem", display: "inline-block" }}
+                  onClick={(e) => e.stopPropagation()}
                 >
                   View on SDSU Housing &#8599;
                 </a>
@@ -256,7 +340,20 @@ export default function ListingsPage({
             </p>
             <div className="listing-grid">
               {subleaseListings.map((listing) => (
-                <article className="listing-card" key={listing.id}>
+                <article
+                  className="listing-card"
+                  key={listing.id}
+                  onClick={() => openListing(listing)}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`View ${listing.title}`}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      openListing(listing);
+                    }
+                  }}
+                >
                   <div className="card-type-badge">Sublease</div>
                   <h4>{listing.title}</h4>
                   <p className="card-meta">
@@ -282,14 +379,14 @@ export default function ListingsPage({
               <article
                 className="listing-card"
                 key={listing.id}
-                onClick={() => setExpandedId((prev) => (prev === listing.id ? null : listing.id))}
+                onClick={() => openListing(listing)}
                 role="button"
                 tabIndex={0}
                 aria-label={`View ${listing.title}`}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
-                    setExpandedId((prev) => (prev === listing.id ? null : listing.id));
+                    openListing(listing);
                   }
                 }}
               >
@@ -301,21 +398,6 @@ export default function ListingsPage({
                 <p className="card-meta">
                   {listing.beds} Bed / {listing.baths} Bath
                 </p>
-
-                {expandedId === listing.id && (
-                  <div className="card-expanded">
-                    <p className="card-description">{listing.description}</p>
-                    <button
-                      className="contact-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        alert("Contact feature coming in Sprint 2!");
-                      }}
-                    >
-                      Contact Lister
-                    </button>
-                  </div>
-                )}
               </article>
             ))}
           </div>
@@ -367,6 +449,14 @@ export default function ListingsPage({
           {showOffCampus && <OffCampusPanel />}
         </div>
       </main>
+
+      {/* ── Contact Modal for off-campus listings ── */}
+      {selectedListing && (
+        <ContactModal
+          listing={selectedListing}
+          onClose={() => setSelectedListing(null)}
+        />
+      )}
     </>
   );
 }

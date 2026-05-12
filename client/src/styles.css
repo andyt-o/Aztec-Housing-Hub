@@ -1753,13 +1753,6 @@ img {
   color: #444;
 }
 
-.card-expanded {
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--border);
-  animation: fadeSlideIn 0.2s ease;
-}
-
 .contact-btn {
   margin-top: 0.75rem;
   padding: 0.65rem 1.5rem;

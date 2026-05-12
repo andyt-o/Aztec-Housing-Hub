@@ -12,7 +12,7 @@
       "availability": "290 units available",
       "description": "Traditional-style first-year residence hall with triple-occupancy rooms (limited doubles). Co-ed by room with communal restrooms. Located near Tony Gwynn Stadium. Amenities include 24/7 front desk, AC, meal plan, community kitchen, furnished rooms, and utilities included.",
       "url": "https://housing.sdsu.edu/communities/chappy",
-      "clicks": 7
+      "clicks": 8
     },
     {
       "id": 1000000002,
@@ -26,7 +26,7 @@
       "availability": "380 units available",
       "description": "Traditional-style first-year residence hall with triple-occupancy rooms (limited quads, doubles, and singles). Co-ed by room with communal restrooms. Located near Tony Gwynn Stadium. Shares a courtyard with Chapultepec featuring an Aztec Market, coffee shop, shuffleboard, basketball court, and BBQs.",
       "url": "https://housing.sdsu.edu/communities/huaxyacac",
-      "clicks": 4
+      "clicks": 5
     },
     {
       "id": 1000000003,
@@ -40,7 +40,7 @@
       "availability": "200 units available",
       "description": "Traditional-style first-year residence halls with double/triple-occupancy rooms. Co-ed by room with communal restrooms. Access via stairs only (no elevators). Located near The Garden Restaurant. Shares an outdoor recreation area with Zura and Tenochca featuring a pool, basketball court, volleyball court, putting green, and BBQs.",
       "url": "https://housing.sdsu.edu/communities/maya-olmeca",
-      "clicks": 1
+      "clicks": 2
     },
     {
       "id": 1000000004,
@@ -53,7 +53,8 @@
       "price": 1050,
       "availability": "Part of 320-unit complex (North & South towers)",
       "description": "Suite-style first-year and sophomore community. Triple and double-occupancy rooms. Co-ed by room with private restroom shared by suitemates. Located near the Aztec Student Union. Ground floor retail includes Trader Joe's, Eureka!, and more.",
-      "url": "https://housing.sdsu.edu/communities/south-campus-plaza"
+      "url": "https://housing.sdsu.edu/communities/south-campus-plaza",
+      "clicks": 1
     },
     {
       "id": 1000000005,
@@ -326,6 +327,22 @@
       "baths": 1,
       "distance": 5.0,
       "availability": "2026-05-13",
+      "description": "123",
+      "type": "Apartment",
+      "placement": "offCampus",
+      "ownerEmail": "asd@sdsu.edu",
+      "clicks": 0,
+      "url": "#"
+    },
+    {
+      "id": 5137000541,
+      "title": "asd",
+      "area": "San Diego",
+      "price": 123,
+      "beds": 1,
+      "baths": 1,
+      "distance": 5.0,
+      "availability": "2026-05-12",
       "description": "123",
       "type": "Apartment",
       "placement": "offCampus",

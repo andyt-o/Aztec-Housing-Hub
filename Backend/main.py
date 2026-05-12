@@ -445,6 +445,14 @@ class DataHandler(BaseHTTPRequestHandler):
             errors["title"] = "Title is required."
         elif contains_vulgarity(title):
             errors["title"] = "Title contains inappropriate language."
+        else:
+            existing = _load_json("listings.json") or {"onCampus": [], "offCampus": []}
+            all_titles = [
+                l.get("title", "").lower()
+                for l in existing.get("onCampus", []) + existing.get("offCampus", [])
+            ]
+            if title.lower() in all_titles:
+                errors["title"] = "A listing with this title already exists."
         if not area:
             errors["area"] = "Area is required."
         elif contains_vulgarity(area):
