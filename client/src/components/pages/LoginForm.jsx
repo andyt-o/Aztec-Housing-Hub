@@ -1,21 +1,39 @@
-export default function LoginForm({ form, setForm, errors, onSubmit, isSubmitting }) {
+import { useState } from "react";
+
+export default function LoginForm({ form, setForm, errors, setErrors, onSubmit, isSubmitting }) {
+  const handleChange = (field, value) => {
+    setForm((c) => ({ ...c, [field]: value }));
+    if (errors[field]) {
+      setErrors((c) => {
+        const next = { ...c };
+        delete next[field];
+        return next;
+      });
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    onSubmit(e);
+  };
+
   return (
-    <form className="auth-form" onSubmit={onSubmit}>
+    <form className="auth-form" onSubmit={handleSubmit}>
       <label className="auth-field">
         <span>Email</span>
         <div className={`email-input-group${errors.email ? " field-error-input" : ""}`}>
           <input
             type="text"
             value={form.email}
-            onChange={(e) =>
-              setForm((c) => ({ ...c, email: e.target.value }))
-            }
+            onChange={(e) => handleChange("email", e.target.value)}
             placeholder="your name"
           />
           <span className="email-domain">@sdsu.edu</span>
         </div>
         {errors.email && (
-          <small className="field-error">{errors.email}</small>
+          <small className="field-error">
+            {errors.email}
+          </small>
         )}
       </label>
 
@@ -24,9 +42,7 @@ export default function LoginForm({ form, setForm, errors, onSubmit, isSubmittin
         <input
           type="password"
           value={form.password}
-          onChange={(e) =>
-            setForm((c) => ({ ...c, password: e.target.value }))
-          }
+          onChange={(e) => handleChange("password", e.target.value)}
           placeholder="Enter your password"
           className={errors.password ? "field-error-input" : ""}
         />

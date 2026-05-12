@@ -8,9 +8,11 @@ export default function AuthPage({
   signupForm,
   setSignupForm,
   signupErrors,
+  setSignupErrors,
   loginForm,
   setLoginForm,
   loginErrors,
+  setLoginErrors,
   globalMessage,
   isSubmitting,
   onSignupSubmit,
@@ -73,6 +75,7 @@ export default function AuthPage({
                 form={loginForm}
                 setForm={setLoginForm}
                 errors={loginErrors}
+                setErrors={setLoginErrors}
                 onSubmit={onLoginSubmit}
                 isSubmitting={isSubmitting}
               />
@@ -81,6 +84,7 @@ export default function AuthPage({
                 form={signupForm}
                 setForm={setSignupForm}
                 errors={signupErrors}
+                setErrors={setSignupErrors}
                 onSubmit={onSignupSubmit}
                 isSubmitting={isSubmitting}
               />

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { validateField } from "../utils/profanity";
+import { validateField } from "../../utils/profanity";
 
 export default function SignupForm({
   form,
@@ -35,7 +35,8 @@ export default function SignupForm({
     e.preventDefault();
     setProfanityErrs({});
 
-    // Frontend profanity checks on name fields
+    // Frontend profanity checks on name fields only
+    // Email profanity check removed (SDSU email is a fixed/verified credential)
     const newErrs = {};
     if (form.firstName?.trim()) {
       const result = await validateField(form.firstName, "First name");
@@ -118,9 +119,7 @@ export default function SignupForm({
       <label className="auth-field">
         <span>SDSU Email</span>
         <div
-          className={`email-input-group${
-            errors.email ? " field-error-input" : ""
-          }`}
+          className={`email-input-group${errors.email ? " field-error-input" : ""}`}
         >
           <input
             type="text"
@@ -131,7 +130,9 @@ export default function SignupForm({
           <span className="email-domain">@sdsu.edu</span>
         </div>
         {errors.email && (
-          <small className="field-error">{errors.email}</small>
+          <small className="field-error">
+            {errors.email}
+          </small>
         )}
       </label>
 

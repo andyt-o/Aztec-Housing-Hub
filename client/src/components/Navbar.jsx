@@ -21,6 +21,18 @@ function UserIcon({ size = 18 }) {
   );
 }
 
+function linkToHash(link) {
+  const map = {
+    "Home": "",
+    "Listings": "listings",
+    "Add Listing": "add-listing",
+    "Roommates": "roommates",
+    "Login / Signup": "auth",
+    "Profile": "profile",
+  };
+  return "#/" + (map[link] ?? "");
+}
+
 export default function Navbar({
   navLinks,
   currentPage,
@@ -31,7 +43,6 @@ export default function Navbar({
   onSignOut,
 }) {
   function handleNavClick(event, link) {
-    event.preventDefault();
     onNavClick(event, link);
   }
 
@@ -81,7 +92,7 @@ export default function Navbar({
 
             return (
               <a
-                href="/"
+                href={linkToHash(link)}
                 key={link}
                 className={isActive ? "nav-active" : ""}
                 onClick={(e) => handleNavClick(e, link)}

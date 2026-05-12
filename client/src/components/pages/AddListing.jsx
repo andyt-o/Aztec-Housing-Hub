@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { checkProfanity, hasProfanity, censor, validateField } from "../utils/profanity";
+import { checkProfanity, hasProfanity, censor, validateField } from "../../utils/profanity";
 
 const apiBaseUrl = "/api";
 
@@ -277,13 +277,10 @@ export default function AddListing({ currentUser, onAddListing }) {
       }
     }
     if (!form.type) errs.type = "Listing type is required.";
-    if (!form.city && !form.zipcode) {
-      errs.area = "Area (city or zipcode) is required.";
-    } else {
-      const zip = form.zipcode.trim();
-      if (zip.length > 0 && !zipcodes.some((z) => z.zip === zip)) {
-        errs.area = "Please enter a valid zipcode from the list.";
-      }
+    if (!form.zipcode.trim()) {
+      errs.zipcode = "Zipcode is required.";
+    } else if (!zipcodes.some((z) => z.zip === form.zipcode.trim())) {
+      errs.zipcode = "Please enter a valid zipcode from the list.";
     }
     if (form.description.trim()) {
       const descCheck = await checkProfanity(form.description.trim());
@@ -399,70 +396,6 @@ export default function AddListing({ currentUser, onAddListing }) {
                 </small>
               </label>
 
-              <label>
-                Area (Zipcode)
-                <input
-                  type="text"
-                  value={form.zipcode}
-                  onChange={(e) => {
-                    const v = e.target.value.replace(/\D/g, "").slice(0, 5);
-                    updateField("zipcode", v);
-                    updateField("city", "");
-                  }}
-                  placeholder="e.g. 92182"
-                  maxLength={5}
-                  disabled={isSubmitting}
-                  className={fieldErrors.area ? "field-error-input" : ""}
-                />
-                {cityOptions.length > 0 && (
-                  <div className="city-dropdown">
-                    {cityOptions.map((z) => (
-                      <button
-                        key={z.zip}
-                        type="button"
-                        className="city-option"
-                        onClick={() => handleCitySelect(z.city, z.zip)}
-                      >
-                        {z.zip} — {z.city}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {form.city && (
-                  <small className="field-hint">Selected city: {form.city}</small>
-                )}
-                {fieldErrors.area && (
-                  <small className="field-error">{fieldErrors.area}</small>
-                )}
-              </label>
-
-              <label>
-                Bedrooms
-                <select
-                  value={form.beds}
-                  onChange={(e) => updateField("beds", e.target.value)}
-                  disabled={isSubmitting}
-                >
-                  <option value="1">1</option>
-                  <option value="2">2</option>
-                  <option value="3">3</option>
-                  <option value="4">4+</option>
-                </select>
-              </label>
-
-              <label>
-                Bathrooms
-                <select
-                  value={form.baths}
-                  onChange={(e) => updateField("baths", e.target.value)}
-                  disabled={isSubmitting}
-                >
-                  <option value="1">1</option>
-                  <option value="2">2</option>
-                  <option value="3">3+</option>
-                </select>
-              </label>
-
               <label ref={calendarAnchorRef}>
                 Availability
                 <div className="date-input-wrapper">
@@ -501,25 +434,91 @@ export default function AddListing({ currentUser, onAddListing }) {
                   </small>
                 )}
               </label>
+
+              <label>
+                Bedrooms
+                <select
+                  value={form.beds}
+                  onChange={(e) => updateField("beds", e.target.value)}
+                  disabled={isSubmitting}
+                >
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4+</option>
+                </select>
+              </label>
+
+              <label>
+                Bathrooms
+                <select
+                  value={form.baths}
+                  onChange={(e) => updateField("baths", e.target.value)}
+                  disabled={isSubmitting}
+                >
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3+</option>
+                </select>
+              </label>
             </div>
 
-            <label>
-              Description
-              <textarea
-                rows="4"
-                value={form.description}
-                onChange={(e) => updateField("description", e.target.value)}
-                placeholder="Include lease term, furniture, parking, and utilities."
-                disabled={isSubmitting}
-                className={fieldErrors.description ? "field-error-input" : ""}
-              />
-              {fieldErrors.description && (
-                <small className="field-error">{fieldErrors.description}</small>
-              )}
-            </label>
+            <div className="add-listing-bottom-row">
+              <label>
+                Description
+                <textarea
+                  rows="3"
+                  value={form.description}
+                  onChange={(e) => updateField("description", e.target.value)}
+                  placeholder="Include lease term, furniture, parking, and utilities."
+                  disabled={isSubmitting}
+                  className={fieldErrors.description ? "field-error-input" : ""}
+                />
+                {fieldErrors.description && (
+                  <small className="field-error">{fieldErrors.description}</small>
+                )}
+              </label>
+
+              <label>
+                Zipcode
+                <input
+                  type="text"
+                  value={form.zipcode}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/\D/g, "").slice(0, 5);
+                    updateField("zipcode", v);
+                    updateField("city", "");
+                  }}
+                  placeholder="e.g. 92182"
+                  maxLength={5}
+                  disabled={isSubmitting}
+                  className={fieldErrors.zipcode ? "field-error-input" : ""}
+                />
+                {cityOptions.length > 0 && (
+                  <div className="city-dropdown">
+                    {cityOptions.map((z) => (
+                      <button
+                        key={z.zip}
+                        type="button"
+                        className="city-option"
+                        onClick={() => handleCitySelect(z.city, z.zip)}
+                      >
+                        {z.zip} — {z.city}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {form.city && (
+                  <small className="field-hint">Selected city: {form.city}</small>
+                )}
+                {fieldErrors.zipcode && (
+                  <small className="field-error">{fieldErrors.zipcode}</small>
+                )}
+              </label>
+            </div>
 
             <div className="form-row">
-              <button type="submit" className="btn-primary" disabled={isSubmitting}>
+              <button type="submit" className="btn-accent" disabled={isSubmitting}>
                 {isSubmitting ? "Posting..." : `Post ${form.type || "Listing"}`}
               </button>
               {form.price && (

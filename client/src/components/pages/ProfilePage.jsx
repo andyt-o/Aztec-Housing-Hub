@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { checkProfanity } from "../utils/profanity";
+import { checkProfanity } from "../../utils/profanity";
 
 const housingTypes = ["All", "Apartment", "Room", "House", "Sublease"];
 
@@ -16,10 +16,10 @@ export default function ProfilePage({
   currentUser,
 }) {
   const [hobbyError, setHobbyError] = useState("");
+  const [keywordError, setKeywordError] = useState("");
 
   const handleHobbiesChange = (value) => {
     setProfileForm((c) => ({ ...c, hobbies: value }));
-    // Clear error as user types
     if (hobbyError) setHobbyError("");
   };
 
@@ -31,6 +31,22 @@ export default function ProfilePage({
     const result = await checkProfanity(value.trim());
     if (result.isProfane) {
       setHobbyError("Hobbies contain inappropriate language.");
+    }
+  };
+
+  const handleKeywordsChange = (value) => {
+    setPreferences((c) => ({ ...c, keywords: value }));
+    if (keywordError) setKeywordError("");
+  };
+
+  const handleKeywordsBlur = async (value) => {
+    if (!value?.trim()) {
+      setKeywordError("");
+      return;
+    }
+    const result = await checkProfanity(value.trim());
+    if (result.isProfane) {
+      setKeywordError("Keywords contain inappropriate language.");
     }
   };
 
@@ -75,69 +91,50 @@ export default function ProfilePage({
         <section className="section-block">
           <h3 style={{ margin: "0 0 0.5rem" }}>Housing Preferences</h3>
           <p style={{ color: "var(--muted)", margin: "0 0 1rem", fontSize: "0.9rem" }}>
-            Set your preferences so we can recommend listings you're interested in.
+            Set your preferences so we can recommend listings you&rsquo;re interested in.
           </p>
 
           <div className="pref-form">
             {/* Housing type checkboxes */}
             <div className="pref-field-group">
-              <div className="pref-field-header">Housing Type</div>
-              <div className="housing-type-group">
-                <label className="pref-check">
-                  <input
-                    type="checkbox"
-                    checked={preferences.onCampusHousing !== false}
-                    onChange={(e) =>
-                      setPreferences((c) => ({
-                        ...c,
-                        onCampusHousing: e.target.checked,
-                      }))
-                    }
-                  />
-                  <span>On-Campus Housing</span>
-                </label>
-                <label className="pref-check">
-                  <input
-                    type="checkbox"
-                    checked={preferences.offCampusHousing !== false}
-                    onChange={(e) =>
-                      setPreferences((c) => ({
-                        ...c,
-                        offCampusHousing: e.target.checked,
-                      }))
-                    }
-                  />
-                  <span>Off-Campus Housing</span>
-                </label>
-              </div>
+              <div className="pref-field-header">Housing Placement</div>
+              <select
+                value={preferences.housingPlacement || "both"}
+                onChange={(e) =>
+                  setPreferences((c) => ({
+                    ...c,
+                    housingPlacement: e.target.value,
+                  }))
+                }
+                className="pref-select"
+              >
+                <option value="both">Both On-Campus & Off-Campus</option>
+                <option value="onCampus">On-Campus Housing Only</option>
+                <option value="offCampus">Off-Campus Housing Only</option>
+              </select>
             </div>
 
-            {/* Looking for housing toggle */}
+            {/* Looking for housing checkbox — same layout as Housing Type */}
             <div className="pref-field-group">
               <div className="pref-field-header">Availability</div>
-              <label className="auth-field pref-field-row">
+              <label className="pref-check">
+                <input
+                  type="checkbox"
+                  checked={preferences.lookingForHousing !== false}
+                  onChange={(e) =>
+                    setPreferences((c) => ({
+                      ...c,
+                      lookingForHousing: e.target.checked,
+                    }))
+                  }
+                />
                 <span>Looking for housing</span>
-                <label className="pref-toggle">
-                  <input
-                    type="checkbox"
-                    checked={preferences.lookingForHousing !== false}
-                    onChange={(e) =>
-                      setPreferences((c) => ({
-                        ...c,
-                        lookingForHousing: e.target.checked,
-                      }))
-                    }
-                  />
-                  <span className="toggle-track">
-                    <span className="toggle-thumb" />
-                  </span>
-                </label>
               </label>
             </div>
 
             {/* Price and bedrooms */}
             <div className="pref-field-group">
-              <div className="pref-field-header">Budget & Space</div>
+              <div className="pref-field-header">Budget &amp; Space</div>
               <div className="auth-form-grid">
                 <label className="auth-field">
                   <span>Max Price ($/month)</span>
@@ -182,15 +179,14 @@ export default function ProfilePage({
                 <input
                   type="text"
                   value={preferences.keywords || ""}
-                  onChange={(e) =>
-                    setPreferences((c) => ({
-                      ...c,
-                      keywords: e.target.value,
-                    }))
-                  }
+                  onChange={(e) => handleKeywordsChange(e.target.value)}
+                  onBlur={(e) => handleKeywordsBlur(e.target.value)}
                   placeholder="e.g. furnished, pet-friendly, parking"
-                  className="pref-input"
+                  className={`pref-input${keywordError ? " field-error-input" : ""}`}
                 />
+                {keywordError && (
+                  <small className="field-error">{keywordError}</small>
+                )}
               </label>
             </div>
 

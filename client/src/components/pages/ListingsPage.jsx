@@ -1,117 +1,132 @@
 import { useState } from "react";
 
-export default function Listings({
+export default function ListingsPage({
+  onCampusHousing = [],
   offCampusListings = [],
   housingTypes = [],
   priceRanges = [],
   bedOptions = [],
-  onTrackClick = () => {},
-  currentUser = null,
+  preferences = {},
+  setPreferences,
 }) {
   const [search, setSearch] = useState("");
   const [selectedType, setSelectedType] = useState("All");
   const [selectedPrice, setSelectedPrice] = useState(0);
   const [selectedBeds, setSelectedBeds] = useState("Any");
-  const [selectedListing, setSelectedListing] = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
 
-  const subleaseListings = offCampusListings.filter(
-    (l) => l.type === "Sublease"
-  );
+  // Derive placement from the single global preference
+  const placement = preferences.housingPlacement || "both";
+  const showOnCampus = placement === "both" || placement === "onCampus";
+  const showOffCampus = placement === "both" || placement === "offCampus";
+  const isBoth = placement === "both";
 
-  const filtered = offCampusListings.filter((listing) => {
+  // Unified type list from both data sources
+  const onCampusDataTypes = [
+    ...new Set(onCampusHousing.map((l) => l.type).filter(Boolean)),
+  ];
+  const offCampusDataTypes = [
+    ...new Set(offCampusListings.map((l) => l.type).filter(Boolean)),
+  ];
+  const allTypes = ["All", ...new Set([...onCampusDataTypes, ...offCampusDataTypes, ...housingTypes])];
+
+  // ── Unified search + type filter for on-campus ──
+  const filteredOnCampus = onCampusHousing.filter((listing) => {
+    const q = search.toLowerCase();
     const matchesSearch =
-      listing.title.toLowerCase().includes(search.toLowerCase()) ||
-      listing.area.toLowerCase().includes(search.toLowerCase()) ||
-      listing.description.toLowerCase().includes(search.toLowerCase());
+      listing.title.toLowerCase().includes(q) ||
+      listing.area.toLowerCase().includes(q) ||
+      (listing.description || "").toLowerCase().includes(q);
+    const matchesType = selectedType === "All" || listing.type === selectedType;
+    return matchesSearch && matchesType;
+  });
 
-    const matchesType =
-      selectedType === "All" || listing.type === selectedType;
+  // Separate sublease listings for the dedicated hub section
+  const subleaseListings = offCampusListings.filter((l) => l.type === "Sublease");
 
+  // ── Unified search + type + price + beds filter for off-campus ──
+  const filteredOffCampus = offCampusListings.filter((listing) => {
+    const q = search.toLowerCase();
+    const matchesSearch =
+      listing.title.toLowerCase().includes(q) ||
+      listing.area.toLowerCase().includes(q) ||
+      (listing.description || "").toLowerCase().includes(q);
+    const matchesType = selectedType === "All" || listing.type === selectedType;
     const range = priceRanges[selectedPrice];
     if (!range) return false;
-    const matchesPrice =
-      listing.price >= range.min && listing.price <= range.max;
-
+    const matchesPrice = listing.price >= range.min && listing.price <= range.max;
     const matchesBeds =
       selectedBeds === "Any" ||
       (selectedBeds === "4+"
         ? listing.beds >= 4
         : listing.beds === Number(selectedBeds));
-
     return matchesSearch && matchesType && matchesPrice && matchesBeds;
   });
 
-  function openListing(listing) {
-    onTrackClick(listing.id);
-    setSelectedListing(listing);
-  }
-
-  function closeModal() {
-    setSelectedListing(null);
+  function handlePlacementChange(value) {
+    if (setPreferences) {
+      setPreferences((c) => ({ ...c, housingPlacement: value }));
+    }
   }
 
   return (
     <>
+      {/* ── Red Banner ── */}
       <div className="page-banner">
         <div className="page-banner-inner">
-          <p className="eyebrow">Listings</p>
-          <h2>Browse Housing Options</h2>
-          <p>
-            {filtered.length} housing option
-            {filtered.length !== 1 ? "s" : ""} near SDSU
-          </p>
+          <p className="eyebrow">SDSU Housing Hub</p>
+          <h2>Browse Listings</h2>
+          <p>Explore on-campus residence halls and off-campus housing near San Diego State University.</p>
         </div>
       </div>
 
       <main className="page-content">
-        {subleaseListings.length > 0 && (
-          <div className="sublease-hub">
-            <h3>Sublease Hub</h3>
-            <p className="listings-page-subtitle">
-              {subleaseListings.length} student sublease post
-              {subleaseListings.length !== 1 ? "s" : ""} in one place
-            </p>
-            <div className="listing-grid">
-              {subleaseListings.map((listing) => (
-                <article className="listing-card" key={listing.id}>
-                  <div className="card-type-badge">Sublease</div>
-                  <h4>{listing.title}</h4>
-                  <p className="card-price">
-                    ${listing.price.toLocaleString()} / month
-                  </p>
-                  <p className="card-meta">
-                    {listing.area} &bull; {listing.distance} mi from campus
-                  </p>
-                  <p className="card-meta">
-                    {listing.beds} Bed / {listing.baths} Bath
-                  </p>
-                  <p className="card-availability">{listing.availability}</p>
-                  <p className="card-description">{listing.description}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* ── Placement Toggle Bar ── */}
+        <div className="placement-toggle-bar">
+          <button
+            type="button"
+            className={`placement-toggle-btn${showOnCampus && !showOffCampus ? " active" : ""}`}
+            onClick={() => handlePlacementChange("onCampus")}
+          >
+            On-Campus Housing
+          </button>
+          <button
+            type="button"
+            className={`placement-toggle-btn${showOnCampus && showOffCampus ? " active" : ""}`}
+            onClick={() => handlePlacementChange("both")}
+          >
+            Both
+          </button>
+          <button
+            type="button"
+            className={`placement-toggle-btn${!showOnCampus && showOffCampus ? " active" : ""}`}
+            onClick={() => handlePlacementChange("offCampus")}
+          >
+            Off-Campus Housing
+          </button>
+        </div>
 
+        {/* ── Unified Filters ── */}
         <div className="filters-bar">
-          <input
-            type="text"
-            className="search-input"
-            placeholder="Search by name, area, or keyword..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <div className="filter-search-row">
+            <div className="filter-search-col">
+              <div className="search-header">Search</div>
+              <input
+                type="text"
+                className="search-input"
+                placeholder="Search by name, area, or keyword..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
 
-          <div className="filter-row">
             <div className="filter-group">
-              <label>Housing Type</label>
+              <div className="search-header">Type</div>
               <div className="filter-chips">
-                {housingTypes.map((type) => (
+                {allTypes.map((type) => (
                   <button
                     key={type}
-                    className={`filter-chip-btn ${
-                      selectedType === type ? "active" : ""
-                    }`}
+                    className={`filter-chip-btn${selectedType === type ? " active" : ""}`}
                     onClick={() => setSelectedType(type)}
                   >
                     {type}
@@ -119,7 +134,9 @@ export default function Listings({
                 ))}
               </div>
             </div>
+          </div>
 
+          <div className="filter-row">
             <div className="filter-group">
               <label>Price Range</label>
               <select
@@ -141,8 +158,8 @@ export default function Listings({
                 {bedOptions.map((bed) => (
                   <button
                     key={bed}
-                    className={`filter-chip-btn ${
-                      selectedBeds === bed ? "active" : ""
+                    className={`filter-chip-btn${
+                      selectedBeds === bed ? " active" : ""
                     }`}
                     onClick={() => setSelectedBeds(bed)}
                   >
@@ -154,151 +171,161 @@ export default function Listings({
           </div>
         </div>
 
-        {filtered.length === 0 ? (
-          <div className="no-results">
-            <p>No listings match your filters. Try broadening your search.</p>
-          </div>
-        ) : (
-          <div className="listing-grid">
-            {filtered.map((listing) => (
-              <article
-                className="listing-card"
-                key={listing.id}
-                onClick={() => openListing(listing)}
-                role="button"
-                tabIndex={0}
-                aria-label={`View details for ${listing.title}`}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    openListing(listing);
-                  }
-                }}
-              >
-                <div className="card-type-badge">{listing.type}</div>
-                <h4>{listing.title}</h4>
-                <p className="card-price">
-                  ${listing.price.toLocaleString()} / month
-                </p>
-                <p className="card-meta">
-                  {listing.area} &bull; {listing.distance} mi from campus
-                </p>
-                <p className="card-meta">
-                  {listing.beds} Bed / {listing.baths} Bath
-                </p>
-                <p className="card-availability">{listing.availability}</p>
-                <p className="card-description">{listing.description}</p>
-                <div className="card-footer">
-                  <span className="card-clicks">
-                    👁 {listing.clicks || 0}
-                  </span>
-                  <span className="card-contact-hint">Click to contact</span>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-
-        {/* ── Listing Detail Modal ── */}
-        {selectedListing && (
-          <div
-            className="modal-overlay"
-            onClick={closeModal}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Listing details"
-          >
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <button
-                className="modal-close"
-                onClick={closeModal}
-                aria-label="Close modal"
-              >
-                &times;
-              </button>
-
-              <div className="modal-header">
-                <span className="modal-badge">{selectedListing.type}</span>
-                <h3>{selectedListing.title}</h3>
-                <p className="modal-location">
-                  {selectedListing.area} &bull; {selectedListing.distance} mi
-                  from campus
+        {/* ── Listing Panels ── */}
+        <div className={`listings-split-layout${isBoth ? " both" : ""}`}>
+          {/* ── On-Campus Housing ── */}
+          {showOnCampus && (
+            <div className={`on-campus-panel${isBoth ? " half" : " full"}`}>
+              <div className="on-campus-header">
+                <h3>SDSU On-Campus Housing</h3>
+                <p className="housing-note">
+                  Browse all {filteredOnCampus.length} residence community
+                  {filteredOnCampus.length !== 1 ? "s" : ""} managed by SDSU Housing.
                 </p>
               </div>
 
-              <div className="modal-body">
-                <div className="modal-details">
-                  <div className="detail-row">
-                    <span className="detail-label">Price</span>
-                    <span className="detail-value">
-                      ${selectedListing.price.toLocaleString()} / month
-                    </span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">Bedrooms / Baths</span>
-                    <span className="detail-value">
-                      {selectedListing.beds}bd / {selectedListing.baths}ba
-                    </span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">Availability</span>
-                    <span className="detail-value">
-                      {selectedListing.availability}
-                    </span>
-                  </div>
-                </div>
-
-                {selectedListing.description && (
-                  <p className="modal-description">
-                    {selectedListing.description}
+              {filteredOnCampus.length === 0 ? (
+                <div className="no-results">
+                  <p>
+                    {search || selectedType !== "All"
+                      ? "No on-campus listings match your filters."
+                      : "No on-campus listings available."}
                   </p>
-                )}
-
-                {/* ── Poster Contact Card ── */}
-                <div className="poster-card">
-                  <h4>Contact the Poster</h4>
-                  <div className="poster-info">
-                    <div className="poster-avatar">
-                      {selectedListing.ownerEmail
-                        ? selectedListing.ownerEmail.charAt(0).toUpperCase()
-                        : "?"}
-                    </div>
-                    <div className="poster-meta">
-                      <p className="poster-email">
-                        {selectedListing.ownerEmail ||
-                          "No email available"}
-                      </p>
-                      <p className="poster-note">
-                        Reach out directly via SDSU email to connect.
-                      </p>
-                    </div>
-                  </div>
-                  <a
-                    href={`mailto:${selectedListing.ownerEmail}`}
-                    className="contact-btn"
-                    onClick={(e) => {
-                      if (!selectedListing.ownerEmail || !selectedListing.ownerEmail.includes("@sdsu.edu")) {
-                        e.preventDefault();
-                        alert("This poster has not provided a valid SDSU email yet.");
-                      }
-                    }}
-                  >
-                    📧 Send Email
-                  </a>
                 </div>
-              </div>
+              ) : (
+                <div className="listing-grid">
+                  {filteredOnCampus.map((listing) => (
+                    <article className="listing-card" key={listing.id}>
+                      <div className="card-type-badge">{listing.type || "On-Campus"}</div>
+                      <h4>{listing.title}</h4>
+                      <p className="card-meta">{listing.area}</p>
+                      <p className="card-meta">
+                        {listing.beds} Bed / {listing.baths} Bath
+                      </p>
+                      <a
+                        href={
+                          listing.url || "https://housing.sdsu.edu/communities"
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="contact-btn"
+                        style={{ marginTop: "0.5rem", display: "inline-block" }}
+                      >
+                        View on SDSU Housing &#8599;
+                      </a>
+                    </article>
+                  ))}
+                </div>
+              )}
 
-              <div className="modal-footer">
-                <span className="modal-clicks">
-                  👁 {selectedListing.clicks || 0} views
-                </span>
-                <button className="btn-secondary" onClick={closeModal}>
-                  Close
-                </button>
+              <div className="on-campus-footer">
+                <a
+                  className="sdsu-link"
+                  href="https://housing.sdsu.edu/communities"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  View All SDSU Communities &#8599;
+                </a>
               </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {/* ── Off-Campus Listings ── */}
+          {showOffCampus && (
+            <div className={`off-campus-panel${isBoth ? " half" : " full"}`}>
+              <div className="off-campus-header">
+                <h3>Off-Campus Listings</h3>
+                <p className="housing-note">
+                  {filteredOffCampus.length} housing option
+                  {filteredOffCampus.length !== 1 ? "s" : ""} near SDSU
+                </p>
+              </div>
+
+              {subleaseListings.length > 0 && (
+                <div className="sublease-hub">
+                  <h4>Sublease Hub</h4>
+                  <p className="listings-page-subtitle">
+                    {subleaseListings.length} student sublease post
+                    {subleaseListings.length !== 1 ? "s" : ""} in one place
+                  </p>
+                  <div className="listing-grid">
+                    {subleaseListings.map((listing) => (
+                      <article className="listing-card" key={listing.id}>
+                        <div className="card-type-badge">Sublease</div>
+                        <h4>{listing.title}</h4>
+                        <p className="card-meta">
+                          {listing.area} &bull; {listing.distance} mi from campus
+                        </p>
+                        <p className="card-meta">
+                          {listing.beds} Bed / {listing.baths} Bath
+                        </p>
+                        <p className="card-description">{listing.description}</p>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {filteredOffCampus.length === 0 ? (
+                <div className="no-results">
+                  <p>No listings match your filters. Try broadening your search.</p>
+                </div>
+              ) : (
+                <div className="listing-grid">
+                  {filteredOffCampus.map((listing) => (
+                    <article
+                      className="listing-card"
+                      key={listing.id}
+                      onClick={() =>
+                        setExpandedId(
+                          expandedId === listing.id ? null : listing.id
+                        )
+                      }
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`View ${listing.title}`}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setExpandedId(
+                            expandedId === listing.id ? null : listing.id
+                          );
+                        }
+                      }}
+                    >
+                      <div className="card-type-badge">{listing.type}</div>
+                      <h4>{listing.title}</h4>
+                      <p className="card-meta">
+                        {listing.area} &bull; {listing.distance} mi from campus
+                      </p>
+                      <p className="card-meta">
+                        {listing.beds} Bed / {listing.baths} Bath
+                      </p>
+
+                      {expandedId === listing.id && (
+                        <div className="card-expanded">
+                          <p className="card-description">
+                            {listing.description}
+                          </p>
+                          <button
+                            className="contact-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              alert("Contact feature coming in Sprint 2!");
+                            }}
+                          >
+                            Contact Lister
+                          </button>
+                        </div>
+                      )}
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </main>
     </>
   );

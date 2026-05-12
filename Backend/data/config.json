@@ -34,6 +34,7 @@
     "maxPrice": 2000,
     "minBeds": 1,
     "preferredTypes": ["Apartment", "Room"],
-    "keywords": ""
+    "keywords": "",
+    "housingPlacement": "both"
   }
 }

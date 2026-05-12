@@ -20,11 +20,7 @@ HOST = "127.0.0.1"
 PORT = 5000
 DATA_DIR = Path(__file__).parent / "data"
 DATA_FILE = Path(__file__).with_name("users.json")
-# [A-Za-z0-9._%+-]@(([A-Za-z0-9-]+\\.)*sdsu\\.edu) — matches sub.sdsu.edu too
-EMAIL_PATTERN = re.compile(
-    r"^[A-Za-z0-9._%+-]+@(?:[A-Za-z0-9-]+\\.)*sdsu\\.edu$"
-)
-RED_ID_PATTERN = re.compile(r"^\\d{1,9}$")
+RED_ID_PATTERN = re.compile(r"^\d{9}$")
 MAX_BODY_BYTES = 64 * 1024
 USERS_LOCK = threading.RLock()
 DATA_LOCK = threading.RLock()
@@ -147,7 +143,7 @@ def validate_signup(payload: dict, users: list) -> tuple:
     first_name = str(payload.get("firstName", "")).strip()
     last_name = str(payload.get("lastName", "")).strip()
     red_id = str(payload.get("redId", "")).strip()
-    email = str(payload.get("email", "")).strip().lower()
+    email = str(payload.get("email", "")).strip()
     password = str(payload.get("password", ""))
     confirm_password = str(payload.get("confirmPassword", ""))
 
@@ -160,12 +156,12 @@ def validate_signup(payload: dict, users: list) -> tuple:
     if not red_id:
         errors["redId"] = "Red ID is required."
     elif not RED_ID_PATTERN.match(red_id):
-        errors["redId"] = "Red ID must be 1-9 digits."
+        errors["redId"] = "Red ID must be exactly 9 digits."
     elif any(user.get("redId") == red_id for user in users):
         errors["redId"] = "That Red ID is already registered."
-    if not email:
+    if not email or not email.endswith("@sdsu.edu"):
         errors["email"] = "SDSU email is required."
-    elif not EMAIL_PATTERN.match(email):
+    elif not email:
         errors["email"] = "Use a valid SDSU email address."
     elif any(user.get("email") == email for user in users):
         errors["email"] = "That SDSU email is already registered."
@@ -213,6 +209,7 @@ class DataHandler(BaseHTTPRequestHandler):
         "/api/listings": "_handle_listings",
         "/api/roommates": "_handle_roommates",
         "/api/config": "_handle_config",
+        "/api/zipcodes": "_handle_zipcodes",
     }
     _POST_ROUTES = {
         "/api/signup": "_handle_signup",
@@ -296,6 +293,13 @@ class DataHandler(BaseHTTPRequestHandler):
             return
         self.respond(200, data)
 
+    def _handle_zipcodes(self):
+        data = _load_json("zipcodes.json")
+        if data is None:
+            self.respond(500, {"message": "zipcodes data not found"})
+            return
+        self.respond(200, {"zipcodes": data})
+
     # -- POST handlers ------------------------------------------------------
 
     def _handle_profanity_check(self):
@@ -304,10 +308,13 @@ class DataHandler(BaseHTTPRequestHandler):
         if payload is None:
             return
         text = str(payload.get("text", ""))
-        self.respond(200, {
-            "isProfane": profanity.contains_profanity(text),
-            "censored": profanity.censor(text),
-        })
+        self.respond(
+            200,
+            {
+                "isProfane": profanity.contains_profanity(text),
+                "censored": profanity.censor(text),
+            },
+        )
 
     def _handle_signup(self):
         payload = self.read_json()
@@ -389,14 +396,10 @@ class DataHandler(BaseHTTPRequestHandler):
         new_last = str(payload.get("lastName", "")).strip()
         email = str(payload.get("email", "")).strip().lower()
         if not new_first or not new_last:
-            self.respond(
-                400, {"message": "First name and last name are required."}
-            )
+            self.respond(400, {"message": "First name and last name are required."})
             return
         if contains_vulgarity(new_first) or contains_vulgarity(new_last):
-            self.respond(
-                400, {"message": "Name contains inappropriate language."}
-            )
+            self.respond(400, {"message": "Name contains inappropriate language."})
             return
         users = load_users()
         user = next((u for u in users if u.get("email") == email), None)
@@ -467,6 +470,7 @@ class DataHandler(BaseHTTPRequestHandler):
             data = {"onCampus": [], "offCampus": []}
 
         import random
+
         new_id = random.randint(1000000000, 9999999999)
         while any(
             existing.get("id") == new_id
@@ -495,7 +499,9 @@ class DataHandler(BaseHTTPRequestHandler):
         data[section].append(new_listing)
         _save_listings(data)
 
-        self.respond(201, {"message": "Listing created successfully.", "listing": new_listing})
+        self.respond(
+            201, {"message": "Listing created successfully.", "listing": new_listing}
+        )
 
     def _handle_add_roommate(self):
         """Persist a new roommate profile submitted by a logged-in user."""
@@ -524,6 +530,7 @@ class DataHandler(BaseHTTPRequestHandler):
             data = []
 
         import random
+
         new_id = random.randint(1000000000, 9999999999)
         while any(existing.get("id") == new_id for existing in data):
             new_id = random.randint(1000000000, 9999999999)
@@ -538,7 +545,13 @@ class DataHandler(BaseHTTPRequestHandler):
         data.append(new_profile)
         _save_roommates(data)
 
-        self.respond(201, {"message": "Roommate profile created successfully.", "profile": new_profile})
+        self.respond(
+            201,
+            {
+                "message": "Roommate profile created successfully.",
+                "profile": new_profile,
+            },
+        )
 
     def _handle_track_click(self):
         payload = self.read_json()

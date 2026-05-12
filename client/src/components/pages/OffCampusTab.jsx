@@ -1,17 +1,2 @@
-import Listings from "../Listings";
-
-export default function OffCampusTab({
-  offCampusListings = [],
-  housingTypes = [],
-  priceRanges = [],
-  bedOptions = [],
-}) {
-  return (
-    <Listings
-      offCampusListings={offCampusListings}
-      housingTypes={housingTypes}
-      priceRanges={priceRanges}
-      bedOptions={bedOptions}
-    />
-  );
-}
+// Deleted — functionality consolidated into ListingsPage.jsx
+// This file is no longer used and will be removed.

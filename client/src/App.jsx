@@ -82,6 +82,29 @@ export default function App() {
   const [profileSaveMessage, setProfileSaveMessage] = useState("");
   const [currentPage, setCurrentPage] = useState("home");
 
+  // ── Sync page with URL hash on mount and on hash change ──
+  useEffect(() => {
+    function hashToPage(hash) {
+      const m = {
+        "": "home",
+        listings: "listings",
+        "add-listing": "add-listing",
+        roommates: "roommates",
+        auth: "auth",
+        "auth-signup": "auth",
+        profile: "profile",
+      };
+      return m[hash] || "home";
+    }
+    function onHash() {
+      const hash = window.location.hash.replace(/^#\//, "");
+      setCurrentPage(hashToPage(hash));
+    }
+    onHash();
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+
   // ── Fetch all data from backend on mount ──
   useEffect(() => {
     const fetchAll = async () => {
@@ -165,6 +188,20 @@ export default function App() {
   }
 
   // ── Message helpers ──
+  const pageToHash = {
+    home: "",
+    listings: "listings",
+    "add-listing": "add-listing",
+    auth: "auth",
+    profile: "profile",
+    roommates: "roommates",
+  };
+
+  function navigateTo(page) {
+    setCurrentPage(page);
+    window.location.hash = "#/" + (pageToHash[page] ?? "");
+  }
+
   function clearMessages() {
     setGlobalMessage({ type: "", text: "" });
   }
@@ -173,49 +210,50 @@ export default function App() {
     const safeListing = await deepCensor(listing);
     safeListing.placement = "offCampus";
     setOffCampusListings((current) => [safeListing, ...current]);
-    setCurrentPage("listings");
+    navigateTo("listings");
   }
 
   // ── Navigation ──
+
   function handleNavClick(event, link) {
     event.preventDefault();
     clearMessages();
     setIsAccountMenuOpen(false);
 
-    if (link === "Home") {
-      setCurrentPage("home");
-    } else if (link === "Listings") {
-      setCurrentPage("listings");
-    } else if (link === "Add Listing") {
-      setCurrentPage("add-listing");
-    } else if (link === "Login / Signup") {
-      if (!currentUser) setCurrentPage("auth");
-    } else if (link === "Profile") {
+    if (link === "Login / Signup") {
+      if (!currentUser) navigateTo("auth");
+      return;
+    }
+    if (link === "Profile") {
       if (currentUser) {
-        setCurrentPage("profile");
+        navigateTo("profile");
       } else {
-        setCurrentPage("auth");
+        navigateTo("auth");
         setGlobalMessage({
           type: "error",
           text: "Log in to edit your roommate profile.",
         });
       }
-    } else if (link === "Roommates") {
+      return;
+    }
+    if (link === "Roommates") {
       if (currentUser) {
-        setCurrentPage("roommates");
+        navigateTo("roommates");
       } else {
-        setCurrentPage("auth");
+        navigateTo("auth");
         setGlobalMessage({
           type: "error",
           text: "Log in to browse roommate matches.",
         });
       }
+      return;
     }
+    navigateTo(link === "Home" ? "home" : link === "Listings" ? "listings" : link === "Add Listing" ? "add-listing" : "home");
   }
 
   function handleSignOut() {
     setCurrentUser(null);
-    setCurrentPage("home");
+    navigateTo("home");
     setAuthMode("login");
     setIsAccountMenuOpen(false);
     setLoginForm(appConfig?.emptyLoginForm || {});
@@ -282,12 +320,12 @@ export default function App() {
       errors.firstName = "First name is required.";
     if (!signupForm.lastName?.trim())
       errors.lastName = "Last name is required.";
-    if (!/^\d{1,9}$/.test(signupForm.redId?.trim() || ""))
-      errors.redId = "Red ID must be 1-9 digits.";
+    if (!signupForm.redId?.trim())
+      errors.redId = "Red ID is required.";
+    else if (!/^\d{9}$/.test(signupForm.redId.trim()))
+      errors.redId = "Red ID must be exactly 9 digits.";
     if (!signupForm.email?.trim())
       errors.email = "Email name is required.";
-    else if (!/^[A-Za-z0-9._%+-]+$/.test(signupForm.email.trim()))
-      errors.email = "Use a valid email name (letters, numbers, dots, etc.).";
     if (!signupForm.password)
       errors.password = "Password is required.";
     else if (signupForm.password.length < 8)
@@ -363,7 +401,7 @@ export default function App() {
       if (loginRes.ok) {
         const loginData = await loginRes.json();
         setCurrentUser(loginData.user);
-        setCurrentPage("home");
+        navigateTo("home");
         setIsAccountMenuOpen(false);
         setSignupForm(appConfig?.emptySignupForm || {});
         setLoginForm(appConfig?.emptyLoginForm || {});
@@ -434,7 +472,7 @@ export default function App() {
       }
 
       setCurrentUser(data.user);
-      setCurrentPage("home");
+      navigateTo("home");
       setIsAccountMenuOpen(false);
       setLoginErrors({});
       setLoginForm(appConfig?.emptyLoginForm || {});
@@ -489,32 +527,27 @@ export default function App() {
       housingTypes,
       priceRanges,
       bedOptions,
+      preferences,
+      setPreferences,
       profileForm,
       setProfileForm,
       profileSaveMessage,
       handleAddListing,
       handleProfileSave,
       calculateCompatibility,
-    };
+};
 
-    switch (currentPage) {
+  switch (currentPage) {
       case "home":
         return (
           <HomePage
-            filters={filters}
-            onCampusHousing={onCampusHousing}
-            offCampusListings={offCampusListings}
-            housingTypes={housingTypes}
-            priceRanges={priceRanges}
-            bedOptions={bedOptions}
             currentUser={currentUser}
             myListings={myListings}
             canCreateListing={canCreateListing}
             preferences={preferences}
-            onUpdatePreferences={setPreferences}
             allListings={allListings}
             onTrackClick={handleTrackClick}
-            setCurrentPage={setCurrentPage}
+            navigateTo={navigateTo}
           />
         );
       case "listings":
@@ -535,9 +568,11 @@ export default function App() {
             signupForm={signupForm}
             setSignupForm={setSignupForm}
             signupErrors={signupErrors}
+            setSignupErrors={setSignupErrors}
             loginForm={loginForm}
             setLoginForm={setLoginForm}
             loginErrors={loginErrors}
+            setLoginErrors={setLoginErrors}
             globalMessage={globalMessage}
             isSubmitting={isSubmitting}
             onSignupSubmit={handleSignupSubmit}
@@ -552,9 +587,11 @@ export default function App() {
             signupForm={signupForm}
             setSignupForm={setSignupForm}
             signupErrors={signupErrors}
+            setSignupErrors={setSignupErrors}
             loginForm={loginForm}
             setLoginForm={setLoginForm}
             loginErrors={loginErrors}
+            setLoginErrors={setLoginErrors}
             globalMessage={globalMessage}
             isSubmitting={isSubmitting}
             onSignupSubmit={handleSignupSubmit}

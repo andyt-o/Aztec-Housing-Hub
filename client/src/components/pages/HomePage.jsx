@@ -9,7 +9,6 @@ const COLLAGE_STEPS = [
       "Search on-campus dorms and off-campus apartments near SDSU with smart filters.",
     gradient: "linear-gradient(135deg, #9d2235 0%, #c0392b 100%)",
     icon: "🏠",
-    navigateTo: "listings",
   },
   {
     step: 2,
@@ -19,7 +18,6 @@ const COLLAGE_STEPS = [
       "Add pricing, availability, and room details so fellow students can find you.",
     gradient: "linear-gradient(135deg, #2c3e50 0%, #3498db 100%)",
     icon: "📝",
-    navigateTo: "add-listing",
   },
   {
     step: 3,
@@ -29,11 +27,10 @@ const COLLAGE_STEPS = [
       "Get matched with compatible roommates based on lifestyle, schedule, and habits.",
     gradient: "linear-gradient(135deg, #1abc9c 0%, #16a085 100%)",
     icon: "🤝",
-    navigateTo: "roommates",
   },
 ];
 
-function Collage({ navigate }) {
+function Collage() {
   return (
     <section className="collage-section">
       <div className="collage-inner">
@@ -51,20 +48,7 @@ function Collage({ navigate }) {
 
         <div className="collage-grid">
           {COLLAGE_STEPS.map((step) => (
-            <div
-              key={step.step}
-              className="collage-card"
-              onClick={() => navigate(step.navigateTo)}
-              role="button"
-              tabIndex={0}
-              aria-label={`Go to ${step.label}`}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  navigate(step.navigateTo);
-                }
-              }}
-            >
+            <div key={step.step} className="collage-card" aria-label={step.label}>
               <div
                 className="collage-card-bg"
                 style={{ background: step.gradient }}
@@ -114,7 +98,7 @@ function Collage({ navigate }) {
 }
 
 /* ── Dashboard: My Listings Panel ── */
-function MyListingsPanel({ myListings, canCreateListing, onNavigate, navigate }) {
+function MyListingsPanel({ myListings, canCreateListing, navigateTo }) {
   return (
     <div className="dash-panel">
       <div className="dash-panel-header">
@@ -126,11 +110,10 @@ function MyListingsPanel({ myListings, canCreateListing, onNavigate, navigate })
 
       {myListings.length === 0 ? (
         <div className="dash-empty">
-          <p style={{ opacity: 0.7 }}>No listings yet.</p>
+          <p>No listings yet.</p>
           <button
             className="btn-primary"
-            style={{ background: "#9d2235", color: "#fff", border: "none", padding: "0.5rem 1.25rem", borderRadius: 6, cursor: "pointer", fontWeight: 600 }}
-            onClick={() => navigate("add-listing")}
+            onClick={() => navigateTo("add-listing")}
             disabled={!canCreateListing}
           >
             + Create Your First Listing
@@ -153,8 +136,7 @@ function MyListingsPanel({ myListings, canCreateListing, onNavigate, navigate })
               <div className="dash-listing-actions">
                 <button
                   className="btn-secondary"
-                  style={{ fontSize: "0.8rem", padding: "0.3rem 0.7rem" }}
-                  onClick={() => navigate("listings")}
+                  onClick={() => navigateTo("listings")}
                 >
                   View
                 </button>
@@ -167,18 +149,8 @@ function MyListingsPanel({ myListings, canCreateListing, onNavigate, navigate })
       {canCreateListing && myListings.length > 0 && (
         <button
           className="btn-primary"
-          style={{
-            width: "100%",
-            marginTop: "0.75rem",
-            background: "#9d2235",
-            color: "#fff",
-            border: "none",
-            padding: "0.6rem",
-            borderRadius: 6,
-            cursor: "pointer",
-            fontWeight: 600,
-          }}
-          onClick={() => navigate("add-listing")}
+          style={{ width: "100%", marginTop: "0.75rem" }}
+          onClick={() => navigateTo("add-listing")}
         >
           + Add Listing ({myListings.length}/3)
         </button>
@@ -204,7 +176,7 @@ function MetricsPanel({ myListings }) {
           <h3>Listing Metrics</h3>
         </div>
         <div className="dash-empty">
-          <p style={{ opacity: 0.7 }}>No metrics yet — create a listing first.</p>
+          <p>No metrics yet — create a listing first.</p>
         </div>
       </div>
     );
@@ -234,7 +206,9 @@ function MetricsPanel({ myListings }) {
             <div key={listing.id} className="metric-row">
               <div className="metric-row-header">
                 <span className="metric-title">{listing.title}</span>
-                <span className="metric-value">{clicks} click{clicks !== 1 ? "s" : ""}</span>
+                <span className="metric-value">
+                  {clicks} click{clicks !== 1 ? "s" : ""}
+                </span>
               </div>
               <div className="metric-bar-bg">
                 <div
@@ -255,7 +229,8 @@ function MetricsPanel({ myListings }) {
               .sort((a, b) => (b.clicks || 0) - (a.clicks || 0))
               .map((l, i) => (
                 <li key={l.id}>
-                  <strong>#{i + 1}</strong> — "{l.title}" ({l.clicks} clicks)
+                  <strong>#{i + 1}</strong> &mdash; "{l.title}" ({l.clicks}{" "}
+                  clicks)
                 </li>
               ))}
           </ul>
@@ -268,99 +243,79 @@ function MetricsPanel({ myListings }) {
 }
 
 /* ── Recommended Listing Detail Modal ── */
+const DETAIL_ROWS = {
+  offCampus: [
+    { label: "Listed by", key: "ownerEmail", fallback: "N/A" },
+    { label: "Area", key: "area" },
+    { label: "Price", key: "price", format: true },
+    { label: "Bedrooms / Baths", key: "beds", plural: "baths" },
+    { label: "Distance", key: "distance", suffix: " mi from SDSU" },
+    { label: "Availability", key: "availability" },
+  ],
+  onCampus: [
+    { label: "Building", key: "title", useTitle: true },
+    { label: "Area", key: "area" },
+    { label: "Bedrooms / Baths", key: "beds", plural: "baths" },
+    { label: "Availability", key: "availability" },
+    { label: "Price", key: "price", format: true },
+    { label: "Distance", key: "distance", suffix: " mi from SDSU" },
+  ],
+};
+
+function DetailRow({ label, value }) {
+  return (
+    <div className="detail-row">
+      <span className="detail-label">{label}</span>
+      <span className="detail-value">{value}</span>
+    </div>
+  );
+}
+
 function RecommendedListingModal({ listing, onClose }) {
-  /* Offer contact information for off-campus listings */
   const isOffCampus = listing.placement === "offCampus";
+  const label = isOffCampus ? "Off-Campus Housing" : "On-Campus Housing";
+  const rows = isOffCampus ? DETAIL_ROWS.offCampus : DETAIL_ROWS.onCampus;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        {isOffCampus ? (
-          /* ── Off-Campus: Show poster contact info ── */
-          <>
-            <button className="modal-close" onClick={onClose} aria-label="Close">&times;</button>
-            <h3 style={{ margin: "0 0 0.5rem", color: "var(--accent)" }}>Off-Campus Housing</h3>
-            <p style={{ color: "var(--muted)", fontSize: "0.9rem", margin: "0 0 1rem" }}>{listing.title}</p>
-            <div className="listing-detail-tile">
-              <div className="detail-row">
-                <span className="detail-label">Listed by</span>
-                <span className="detail-value">{listing.ownerEmail || "N/A"}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Area</span>
-                <span className="detail-value">{listing.area}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Price</span>
-                <span className="detail-value">${(listing.price || 0).toLocaleString()}/mo</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Bedrooms / Baths</span>
-                <span className="detail-value">{listing.beds}bd / {listing.baths}ba</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Distance</span>
-                <span className="detail-value">{listing.distance} mi from SDSU</span>
-              </div>
-              {listing.description && (
-                <div className="detail-row">
-                  <span className="detail-label">Description</span>
-                  <span className="detail-value">{listing.description}</span>
-                </div>
-              )}
-            </div>
-          </>
-        ) : (
-          /* ── On-Campus: Redirect to SDSU site ── */
-          <>
-            <button className="modal-close" onClick={onClose} aria-label="Close">&times;</button>
-            <h3 style={{ margin: "0 0 0.5rem", color: "var(--accent)" }}>On-Campus Housing</h3>
-            <p style={{ color: "var(--muted)", fontSize: "0.9rem", margin: "0 0 1rem" }}>
-              {listing.title}
-            </p>
-            <div className="listing-detail-tile">
-              <div className="detail-row">
-                <span className="detail-label">Building</span>
-                <span className="detail-value">{listing.title}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Area</span>
-                <span className="detail-value">{listing.area}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Bedrooms / Baths</span>
-                <span className="detail-value">{listing.beds}bd / {listing.baths}ba</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Price</span>
-                <span className="detail-value">${(listing.price || 0).toLocaleString()}/mo</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Distance</span>
-                <span className="detail-value">{listing.distance} mi from SDSU</span>
-              </div>
-              {listing.description && (
-                <div className="detail-row">
-                  <span className="detail-label">Description</span>
-                  <span className="detail-value">{listing.description}</span>
-                </div>
-              )}
-            </div>
-            <div style={{ textAlign: "center", marginTop: "1.25rem" }}>
-              <a
-                className="btn-primary"
-                href={listing.url || "#"}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => {
-                  /* Let the <a> navigate naturally, but also track the click */
-                  onClose();
-                }}
-              >
-                View on SDSU Housing Site
-              </a>
-            </div>
-          </>
+        <button className="modal-close" onClick={onClose} aria-label="Close">
+          &times;
+        </button>
+        <h3 className="modal-title">{label}</h3>
+        <p className="modal-subtitle">{listing.title}</p>
+        <div className="listing-detail-tile">
+          {rows.map((row) => {
+            let value;
+            if (row.useTitle) {
+              value = listing.title;
+            } else if (row.format) {
+              value = `$${(listing[row.key] || 0).toLocaleString()}/mo`;
+            } else if (row.plural) {
+              value = `${listing[row.key]}bd / ${listing[row.plural]}ba`;
+            } else if (row.suffix) {
+              value = `${listing[row.key]} ${row.suffix}`;
+            } else {
+              value = listing[row.key] || "N/A";
+            }
+            return <DetailRow key={row.label} label={row.label} value={value} />;
+          })}
+          {listing.description && (
+            <DetailRow label="Description" value={listing.description} />
+          )}
+        </div>
+        {!isOffCampus && (
+          <div className="modal-cta">
+            <a
+              className="btn-primary"
+              href={listing.url || "#"}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onClose}
+            >
+              View on SDSU Housing Site
+            </a>
+          </div>
         )}
       </div>
     </div>
@@ -368,18 +323,19 @@ function RecommendedListingModal({ listing, onClose }) {
 }
 
 /* ── Dashboard: Updates / Recommended Listings Panel ── */
-function UpdatesPanel({ allListings, preferences, myListings, onTrackClick, onSelectListing, myEmail }) {
+function UpdatesPanel({ allListings, preferences, myListings, onTrackClick, onSelectListing }) {
   const lookingForHousing = preferences.lookingForHousing !== false;
   const maxPrice = Number(preferences.maxPrice) || 999999;
   const minBeds = Number(preferences.minBeds) || 0;
   const preferredTypes = preferences.preferredTypes || [];
   const keywords = (preferences.keywords || "").toLowerCase().trim();
+  const placement = preferences.housingPlacement || "both";
 
   const myListingIds = new Set(myListings.map((l) => l.id));
 
-  // Filter: must not be my own, must match preferences
   let recommended = (allListings || []).filter((l) => {
     if (myListingIds.has(l.id)) return false;
+    if (placement !== "both" && l.placement !== placement) return false;
     if (l.price > maxPrice) return false;
     if (l.beds < minBeds) return false;
     if (preferredTypes.length > 0 && !preferredTypes.includes(l.type) && !preferredTypes.includes("All")) return false;
@@ -390,7 +346,6 @@ function UpdatesPanel({ allListings, preferences, myListings, onTrackClick, onSe
     return true;
   });
 
-  // Sort by clicks descending (popularity), trim to 6
   recommended.sort((a, b) => (b.clicks || 0) - (a.clicks || 0));
   recommended = recommended.slice(0, 6);
 
@@ -405,8 +360,6 @@ function UpdatesPanel({ allListings, preferences, myListings, onTrackClick, onSe
         <h3>Recommended for You</h3>
         <button
           className="btn-link"
-          style={{ fontSize: "0.8rem", padding: 0 }}
-          onClick={() => {}}
           title="Preferences are set in your Profile"
         >
           ⚙️
@@ -415,15 +368,11 @@ function UpdatesPanel({ allListings, preferences, myListings, onTrackClick, onSe
 
       {!lookingForHousing ? (
         <div className="dash-empty">
-          <p style={{ opacity: 0.7 }}>
-            Enable "Looking for housing" in your Profile to see recommendations.
-          </p>
+          <p>Enable "Looking for housing" in your Profile to see recommendations.</p>
         </div>
       ) : recommended.length === 0 ? (
         <div className="dash-empty">
-          <p style={{ opacity: 0.7 }}>
-            No listings match your preferences. Try adjusting filters in your Profile.
-          </p>
+          <p>No listings match your preferences. Try adjusting filters in your Profile.</p>
         </div>
       ) : (
         <div className="dash-updates-list">
@@ -447,7 +396,8 @@ function UpdatesPanel({ allListings, preferences, myListings, onTrackClick, onSe
                 <h4>{listing.title}</h4>
                 <p className="dash-update-meta">
                   {listing.area} &bull; {listing.beds}bd/{listing.baths}ba
-                  &bull; ${(listing.price || 0).toLocaleString()} &bull; {listing.distance} mi
+                  &bull; ${(listing.price || 0).toLocaleString()} &bull; {listing.distance}{" "}
+                  mi
                 </p>
               </div>
               <div className="dash-update-footer">
@@ -463,12 +413,7 @@ function UpdatesPanel({ allListings, preferences, myListings, onTrackClick, onSe
 
       {recommended.length > 0 && (
         <div className="dash-updates-cta">
-          <button
-            className="btn-secondary"
-            style={{ width: "100%", fontSize: "0.85rem", marginTop: "0.5rem" }}
-            onClick={() => {}}
-            title="Preferences are set in your Profile"
-          >
+          <button className="btn-secondary" title="Preferences are set in your Profile">
             Refine Preferences in Profile
           </button>
         </div>
@@ -477,22 +422,17 @@ function UpdatesPanel({ allListings, preferences, myListings, onTrackClick, onSe
   );
 }
 
-/* ── Dashboard: My Listings Panel ── */
+/* ── Dashboard: HomePage ── */
 export default function HomePage({
   currentUser,
   myListings,
   canCreateListing,
   preferences,
-  onUpdatePreferences,
   allListings,
   onTrackClick,
-  setCurrentPage,
+  navigateTo,
 }) {
   const [selectedListing, setSelectedListing] = useState(null);
-
-  function navigate(page) {
-    setCurrentPage(page);
-  }
 
   function closeListingModal() {
     setSelectedListing(null);
@@ -500,14 +440,11 @@ export default function HomePage({
 
   return (
     <>
-      {/* ── Hero — full-bleed banner ── */}
+      {/* ── Hero ── */}
       <section className="hero">
         <div className="hero-inner">
           <div className="hero-copy">
-            <p
-              className="eyebrow"
-              style={{ color: "rgba(255,255,255,0.8)" }}
-            >
+            <p className="eyebrow" style={{ color: "rgba(255,255,255,0.8)" }}>
               Welcome to SDSU's Housing Hub
             </p>
             <h2 style={{ color: "#fff", fontSize: "2rem" }}>
@@ -528,12 +465,8 @@ export default function HomePage({
                 <div className="hero-buttons-vertical">
                   <button
                     className="btn-primary"
-                    style={{
-                      background: "#fff",
-                      color: "#9d2235",
-                      border: "none",
-                    }}
-                    onClick={() => navigate("add-listing")}
+                    style={{ background: "#fff", color: "#9d2235", border: "none" }}
+                    onClick={() => navigateTo("add-listing")}
                     disabled={!canCreateListing}
                   >
                     + New Listing
@@ -545,23 +478,13 @@ export default function HomePage({
                   </button>
                   <button
                     className="btn-secondary"
-                    style={{
-                      background: "rgba(255,255,255,0.15)",
-                      color: "#fff",
-                      border: "1px solid rgba(255,255,255,0.4)",
-                    }}
-                    onClick={() => navigate("listings")}
+                    onClick={() => navigateTo("listings")}
                   >
                     Browse Listings
                   </button>
                   <button
-                    className="btn-secondary"
-                    style={{
-                      background: "rgba(255,255,255,0.15)",
-                      color: "#fff",
-                      border: "1px solid rgba(255,255,255,0.4)",
-                    }}
-                    onClick={() => navigate("roommates")}
+                    className="btn-red"
+                    onClick={() => navigateTo("roommates")}
                   >
                     View Roommates
                   </button>
@@ -575,18 +498,13 @@ export default function HomePage({
                   <button
                     className="btn-primary"
                     style={{ background: "#fff", color: "#9d2235" }}
-                    onClick={() => navigate("auth-signup")}
+                    onClick={() => navigateTo("auth-signup")}
                   >
                     Create Account
                   </button>
                   <button
                     className="btn-secondary"
-                    style={{
-                      background: "rgba(255,255,255,0.15)",
-                      color: "#fff",
-                      border: "1px solid rgba(255,255,255,0.4)",
-                    }}
-                    onClick={() => navigate("listings")}
+                    onClick={() => navigateTo("listings")}
                   >
                     Browse Listings
                   </button>
@@ -600,28 +518,26 @@ export default function HomePage({
       {/* ── Content below hero ── */}
       <main className="page-content">
         {/* Guest: Collage "How It Works" */}
-        {!currentUser && <Collage navigate={navigate} />}
+        {!currentUser && <Collage />}
 
         {/* Authenticated: Three-panel dashboard */}
         {currentUser && (
           <div className="dashboard-grid">
-              <MyListingsPanel
-                myListings={myListings}
-                canCreateListing={canCreateListing}
-                onNavigate={navigate}
-                navigate={navigate}
-              />
-              <MetricsPanel myListings={myListings} />
-              <UpdatesPanel
-                allListings={allListings}
-                preferences={preferences}
-                myListings={myListings}
-                onTrackClick={onTrackClick}
-                onSelectListing={setSelectedListing}
-                myEmail={currentUser.email}
-              />
-            </div>
-          )}
+            <MyListingsPanel
+              myListings={myListings}
+              canCreateListing={canCreateListing}
+              navigate={navigateTo}
+            />
+            <MetricsPanel myListings={myListings} />
+            <UpdatesPanel
+              allListings={allListings}
+              preferences={preferences}
+              myListings={myListings}
+              onTrackClick={onTrackClick}
+              onSelectListing={setSelectedListing}
+            />
+          </div>
+        )}
       </main>
 
       {/* ── Recommended Listing Detail Modal ── */}
