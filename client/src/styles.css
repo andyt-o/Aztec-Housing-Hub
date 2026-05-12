@@ -2048,6 +2048,33 @@ img {
   max-width: 100%;
 }
 
+/* ── Panel-level search (split view) ── */
+.panel-search {
+  padding-bottom: 0.5rem;
+}
+
+.panel-search .search-header {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 0.35rem;
+}
+
+.panel-search .search-input {
+  width: 100%;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.88rem;
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--text);
+}
+
+.panel-search .search-input:focus {
+  outline: 2px solid rgba(157, 34, 53, 0.3);
+  border-color: var(--accent);
+}
+
 /* ── On-campus panel override for filters inside ── */
 .on-campus-panel .panel-filters,
 .off-campus-panel .panel-filters {
