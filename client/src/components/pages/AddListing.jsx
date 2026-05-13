@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 
-const apiBaseUrl = "/api";
+const apiBaseUrl = import.meta.env.VITE_API_URL || "/api";
 
 function formatDateToDisplay(dateString) {
   if (!dateString) return "";
