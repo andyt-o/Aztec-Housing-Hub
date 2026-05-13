@@ -4,7 +4,7 @@
  * and every displayed string can be validated / censored server-side.
  */
 
-const API = "/api";
+const API = import.meta.env.VITE_API_URL || "/api";
 
 /**
  * Ask the server whether `text` contains profanity.
