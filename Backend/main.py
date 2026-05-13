@@ -44,18 +44,23 @@ db_pool = psycopg2.pool.ThreadedConnectionPool(1, 20, dsn=DATABASE_URL)
 # ---------------------------------------------------------------------------
 profanity.load_censor_words()
 
+
 def contains_vulgarity(text: str) -> bool:
     return profanity.contains_profanity(text)
+
 
 def censor_text(text: str) -> str:
     return profanity.censor(text)
 
+
 def clamp_price(value: int | float) -> int:
     return max(25, min(10000, int(value)))
+
 
 # ---------------------------------------------------------------------------
 # Database & Config helpers
 # ---------------------------------------------------------------------------
+
 
 @contextmanager
 def get_db():
@@ -64,6 +69,7 @@ def get_db():
         yield conn
     finally:
         db_pool.putconn(conn)
+
 
 def _load_config() -> object:
     """Load config.json from the data directory."""
@@ -76,9 +82,11 @@ def _load_config() -> object:
     except (json.JSONDecodeError, UnicodeDecodeError):
         return None
 
+
 # ---------------------------------------------------------------------------
 # Auth helpers
 # ---------------------------------------------------------------------------
+
 
 def hash_password(password: str, salt=None) -> dict:
     salt_bytes = salt or os.urandom(16)
@@ -88,6 +96,7 @@ def hash_password(password: str, salt=None) -> dict:
         "hash": base64.b64encode(digest).decode("utf-8"),
     }
 
+
 def verify_password(password: str, stored: dict) -> bool:
     try:
         salt = base64.b64decode(stored["salt"])
@@ -96,9 +105,11 @@ def verify_password(password: str, stored: dict) -> bool:
     computed = hash_password(password, salt)
     return hmac.compare_digest(computed["hash"], stored.get("hash", ""))
 
+
 # ---------------------------------------------------------------------------
 # HTTP handler
 # ---------------------------------------------------------------------------
+
 
 class DataHandler(BaseHTTPRequestHandler):
     _GET_ROUTES = {
@@ -148,7 +159,9 @@ class DataHandler(BaseHTTPRequestHandler):
     def end_headers(self):
         self._send_cors_headers()
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS, DELETE")
+        self.send_header(
+            "Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS, DELETE"
+        )
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "no-referrer")
         super().end_headers()
@@ -162,7 +175,7 @@ class DataHandler(BaseHTTPRequestHandler):
             routes = self._DELETE_ROUTES
         else:
             routes = self._POST_ROUTES
-        return routes.get(self.path.split('?')[0])
+        return routes.get(self.path.split("?")[0])
 
     # -- GET handlers -------------------------------------------------------
 
@@ -224,7 +237,7 @@ class DataHandler(BaseHTTPRequestHandler):
                     "description": row["description"],
                     "url": row["url"],
                     "clicks": row["clicks"],
-                    "clickHistory": row["click_history"]
+                    "clickHistory": row["click_history"],
                 }
                 if row.get("distance") is not None:
                     listing["distance"] = row["distance"]
@@ -239,7 +252,7 @@ class DataHandler(BaseHTTPRequestHandler):
                     on_campus.append(listing)
                 else:
                     off_campus.append(listing)
-                    
+
             self.respond(200, {"onCampus": on_campus, "offCampus": off_campus})
         except Exception as e:
             self.respond(500, {"message": "Failed to load listings."})
@@ -250,15 +263,28 @@ class DataHandler(BaseHTTPRequestHandler):
         if not listing_id:
             self.respond(400, {"message": "listingId is required."})
             return
-        
+
         try:
             listing_id = int(listing_id)
             with get_db() as conn:
                 with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                    cur.execute("SELECT date, count FROM listing_click_history WHERE listing_id = %s ORDER BY date ASC", (listing_id,))
+                    cur.execute(
+                        "SELECT date, count FROM listing_click_history WHERE listing_id = %s ORDER BY date ASC",
+                        (listing_id,),
+                    )
                     rows = cur.fetchall()
-            
-            history = [{"date": r["date"].strftime("%Y-%m-%d") if hasattr(r["date"], "strftime") else str(r["date"]), "count": r["count"]} for r in rows]
+
+            history = [
+                {
+                    "date": (
+                        r["date"].strftime("%Y-%m-%d")
+                        if hasattr(r["date"], "strftime")
+                        else str(r["date"])
+                    ),
+                    "count": r["count"],
+                }
+                for r in rows
+            ]
             self.respond(200, {"history": history})
         except Exception as e:
             self.respond(500, {"message": "Failed to fetch click history."})
@@ -270,16 +296,19 @@ class DataHandler(BaseHTTPRequestHandler):
         if payload is None:
             return
         text = str(payload.get("text", ""))
-        self.respond(200, {
-            "isProfane": profanity.contains_profanity(text),
-            "censored": profanity.censor(text),
-        })
+        self.respond(
+            200,
+            {
+                "isProfane": profanity.contains_profanity(text),
+                "censored": profanity.censor(text),
+            },
+        )
 
     def _handle_signup(self):
         payload = self.read_json()
         if payload is None:
             return
-            
+
         errors = {}
         first_name = str(payload.get("firstName", "")).strip()
         last_name = str(payload.get("lastName", "")).strip()
@@ -294,15 +323,15 @@ class DataHandler(BaseHTTPRequestHandler):
             errors["lastName"] = "Last name is required."
         if contains_vulgarity(first_name) or contains_vulgarity(last_name):
             errors["name"] = "Name contains inappropriate language."
-        
+
         if not red_id:
             errors["redId"] = "Red ID is required."
         elif not RED_ID_PATTERN.match(red_id):
             errors["redId"] = "Red ID must be exactly 9 digits."
-            
+
         if not email or not email.endswith("@sdsu.edu"):
             errors["email"] = "SDSU email is required."
-        
+
         if not password:
             errors["password"] = "Password is required."
         elif len(password) < 8:
@@ -327,7 +356,9 @@ class DataHandler(BaseHTTPRequestHandler):
                 return
 
         if errors:
-            self.respond(400, {"message": "Please fix the highlighted fields.", "errors": errors})
+            self.respond(
+                400, {"message": "Please fix the highlighted fields.", "errors": errors}
+            )
             return
 
         password_data = hash_password(password)
@@ -337,24 +368,38 @@ class DataHandler(BaseHTTPRequestHandler):
         try:
             with get_db() as conn:
                 with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                    cur.execute("""
+                    cur.execute(
+                        """
                         INSERT INTO users (first_name, last_name, red_id, email, password_hash, password_salt, bio)
                         VALUES (%s, %s, %s, %s, %s, %s, %s)
                         RETURNING id, first_name, last_name, red_id, email, bio
-                    """, (first_name_clean, last_name_clean, red_id, email, password_data["hash"], password_data["salt"], ""))
+                    """,
+                        (
+                            first_name_clean,
+                            last_name_clean,
+                            red_id,
+                            email,
+                            password_data["hash"],
+                            password_data["salt"],
+                            "",
+                        ),
+                    )
                     new_user_row = cur.fetchone()
                 conn.commit()
 
-            self.respond(201, {
-                "message": "Account created successfully.",
-                "user": {
-                    "firstName": new_user_row["first_name"],
-                    "lastName": new_user_row["last_name"],
-                    "redId": new_user_row["red_id"],
-                    "email": new_user_row["email"],
-                    "bio": new_user_row["bio"]
-                }
-            })
+            self.respond(
+                201,
+                {
+                    "message": "Account created successfully.",
+                    "user": {
+                        "firstName": new_user_row["first_name"],
+                        "lastName": new_user_row["last_name"],
+                        "redId": new_user_row["red_id"],
+                        "email": new_user_row["email"],
+                        "bio": new_user_row["bio"],
+                    },
+                },
+            )
         except Exception as e:
             self.respond(500, {"message": "Failed to create account."})
 
@@ -362,18 +407,20 @@ class DataHandler(BaseHTTPRequestHandler):
         payload = self.read_json()
         if payload is None:
             return
-        
+
         errors = {}
         email = str(payload.get("email", "")).strip().lower()
         password = str(payload.get("password", ""))
-        
+
         if not email:
             errors["email"] = "Email is required."
         if not password:
             errors["password"] = "Password is required."
-        
+
         if errors:
-            self.respond(400, {"message": "Please fix the highlighted fields.", "errors": errors})
+            self.respond(
+                400, {"message": "Please fix the highlighted fields.", "errors": errors}
+            )
             return
 
         try:
@@ -383,28 +430,43 @@ class DataHandler(BaseHTTPRequestHandler):
                     user_row = cur.fetchone()
 
             if not user_row:
-                self.respond(401, {"message": "Login failed.", "errors": {"general": "Incorrect email or password."}})
+                self.respond(
+                    401,
+                    {
+                        "message": "Login failed.",
+                        "errors": {"general": "Incorrect email or password."},
+                    },
+                )
                 return
 
             stored_password = {
                 "salt": user_row["password_salt"],
-                "hash": user_row["password_hash"]
+                "hash": user_row["password_hash"],
             }
 
             if not verify_password(password, stored_password):
-                self.respond(401, {"message": "Login failed.", "errors": {"general": "Incorrect email or password."}})
+                self.respond(
+                    401,
+                    {
+                        "message": "Login failed.",
+                        "errors": {"general": "Incorrect email or password."},
+                    },
+                )
                 return
 
-            self.respond(200, {
-                "message": "Login successful.",
-                "user": {
-                    "firstName": user_row["first_name"],
-                    "lastName": user_row["last_name"],
-                    "redId": user_row["red_id"],
-                    "email": user_row["email"],
-                    "bio": user_row.get("bio", "")
-                }
-            })
+            self.respond(
+                200,
+                {
+                    "message": "Login successful.",
+                    "user": {
+                        "firstName": user_row["first_name"],
+                        "lastName": user_row["last_name"],
+                        "redId": user_row["red_id"],
+                        "email": user_row["email"],
+                        "bio": user_row.get("bio", ""),
+                    },
+                },
+            )
         except Exception as e:
             self.respond(500, {"message": "Login process failed."})
 
@@ -431,21 +493,21 @@ class DataHandler(BaseHTTPRequestHandler):
             errors["title"] = "Title is required."
         elif contains_vulgarity(title):
             errors["title"] = "Title contains inappropriate language."
-        
+
         if not area:
             errors["area"] = "Area is required."
         elif contains_vulgarity(area):
             errors["area"] = "Area contains inappropriate language."
-            
+
         if description and contains_vulgarity(description):
             errors["description"] = "Description contains inappropriate language."
-            
+
         if not price or int(price) < 1:
             errors["price"] = "Price must be at least $1."
-            
+
         if not availability:
             errors["availability"] = "Availability is required."
-            
+
         if not listing_type:
             errors["type"] = "Listing type is required."
 
@@ -453,15 +515,22 @@ class DataHandler(BaseHTTPRequestHandler):
             try:
                 with get_db() as conn:
                     with conn.cursor() as cur:
-                        cur.execute("SELECT 1 FROM listings WHERE LOWER(title) = LOWER(%s)", (title,))
+                        cur.execute(
+                            "SELECT 1 FROM listings WHERE LOWER(title) = LOWER(%s)",
+                            (title,),
+                        )
                         if cur.fetchone():
-                            errors["title"] = "A listing with this title already exists."
+                            errors["title"] = (
+                                "A listing with this title already exists."
+                            )
             except Exception as e:
                 self.respond(500, {"message": "Validation failed."})
                 return
 
         if errors:
-            self.respond(400, {"message": "Please fix the highlighted fields.", "errors": errors})
+            self.respond(
+                400, {"message": "Please fix the highlighted fields.", "errors": errors}
+            )
             return
 
         try:
@@ -474,18 +543,32 @@ class DataHandler(BaseHTTPRequestHandler):
                             break
                         new_id = random.randint(1000000000, 9999999999)
 
-                    cur.execute("""
+                    cur.execute(
+                        """
                         INSERT INTO listings (
                             id, title, area, price, beds, baths, distance, availability,
                             description, type, placement, owner_email, roommate_status, clicks, url
                         ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         RETURNING *
-                    """, (
-                        new_id, censor_text(title), censor_text(area), clamp_price(price),
-                        int(beds), int(baths), float(distance), availability,
-                        censor_text(description), listing_type, placement, owner_email,
-                        roommate_status, 0, "#"
-                    ))
+                    """,
+                        (
+                            new_id,
+                            censor_text(title),
+                            censor_text(area),
+                            clamp_price(price),
+                            int(beds),
+                            int(baths),
+                            float(distance),
+                            availability,
+                            censor_text(description),
+                            listing_type,
+                            placement,
+                            owner_email,
+                            roommate_status,
+                            0,
+                            "#",
+                        ),
+                    )
                     new_db_listing = cur.fetchone()
                 conn.commit()
 
@@ -504,9 +587,12 @@ class DataHandler(BaseHTTPRequestHandler):
                 "ownerEmail": new_db_listing["owner_email"],
                 "roommateStatus": new_db_listing["roommate_status"],
                 "clicks": new_db_listing["clicks"],
-                "url": new_db_listing["url"]
+                "url": new_db_listing["url"],
             }
-            self.respond(201, {"message": "Listing created successfully.", "listing": new_listing})
+            self.respond(
+                201,
+                {"message": "Listing created successfully.", "listing": new_listing},
+            )
         except Exception as e:
             self.respond(500, {"message": "Failed to create listing."})
 
@@ -514,33 +600,41 @@ class DataHandler(BaseHTTPRequestHandler):
         payload = self.read_json()
         if payload is None:
             return
-            
+
         listing_id = payload.get("listingId")
         if listing_id is None:
             self.respond(400, {"message": "listingId is required."})
             return
-            
+
         try:
             with get_db() as conn:
                 with conn.cursor() as cur:
-                    cur.execute("UPDATE listings SET clicks = clicks + 1 WHERE id = %s RETURNING id", (listing_id,))
+                    cur.execute(
+                        "UPDATE listings SET clicks = clicks + 1 WHERE id = %s RETURNING id",
+                        (listing_id,),
+                    )
                     if not cur.fetchone():
                         self.respond(404, {"message": "Listing not found."})
                         return
-                    
+
                     pst_now = datetime.utcnow() - timedelta(hours=7)
                     today = pst_now.strftime("%Y-%m-%d")
-                    
-                    cur.execute("""
+
+                    cur.execute(
+                        """
                         INSERT INTO listing_click_history (listing_id, date, count)
                         VALUES (%s, %s, 1)
                         ON CONFLICT (listing_id, date)
                         DO UPDATE SET count = listing_click_history.count + 1
-                    """, (listing_id, today))
-                    
+                    """,
+                        (listing_id, today),
+                    )
+
                     ninety_days_ago = pst_now - timedelta(days=90)
-                    cur.execute("DELETE FROM listing_click_history WHERE listing_id = %s AND date < %s", 
-                                (listing_id, ninety_days_ago.strftime("%Y-%m-%d")))
+                    cur.execute(
+                        "DELETE FROM listing_click_history WHERE listing_id = %s AND date < %s",
+                        (listing_id, ninety_days_ago.strftime("%Y-%m-%d")),
+                    )
                 conn.commit()
             self.respond(200, {"message": "Click tracked."})
         except Exception as e:
@@ -552,44 +646,50 @@ class DataHandler(BaseHTTPRequestHandler):
         payload = self.read_json()
         if payload is None:
             return
-            
+
         new_first = str(payload.get("firstName", "")).strip()
         new_last = str(payload.get("lastName", "")).strip()
         email = str(payload.get("email", "")).strip().lower()
-        
+
         if not new_first or not new_last:
             self.respond(400, {"message": "First name and last name are required."})
             return
         if contains_vulgarity(new_first) or contains_vulgarity(new_last):
             self.respond(400, {"message": "Name contains inappropriate language."})
             return
-            
+
         try:
             with get_db() as conn:
                 with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                    cur.execute("""
+                    cur.execute(
+                        """
                         UPDATE users
                         SET first_name = %s, last_name = %s
                         WHERE email = %s
                         RETURNING first_name, last_name, red_id, email, bio
-                    """, (censor_text(new_first), censor_text(new_last), email))
+                    """,
+                        (censor_text(new_first), censor_text(new_last), email),
+                    )
                     updated_user = cur.fetchone()
-                
+
                 if not updated_user:
                     self.respond(404, {"message": "User not found."})
                     return
                 conn.commit()
 
-            self.respond(200, {
-                "message": "Name updated successfully.",
-                "user": {
-                    "firstName": updated_user["first_name"],
-                    "lastName": updated_user["last_name"],
-                    "redId": updated_user["red_id"],
-                    "email": updated_user["email"],
-                    "bio": updated_user.get("bio", "")
-                }
-            })
+            self.respond(
+                200,
+                {
+                    "message": "Name updated successfully.",
+                    "user": {
+                        "firstName": updated_user["first_name"],
+                        "lastName": updated_user["last_name"],
+                        "redId": updated_user["red_id"],
+                        "email": updated_user["email"],
+                        "bio": updated_user.get("bio", ""),
+                    },
+                },
+            )
         except Exception as e:
             self.respond(500, {"message": "Failed to update name."})
 
@@ -597,7 +697,7 @@ class DataHandler(BaseHTTPRequestHandler):
         payload = self.read_json()
         if payload is None:
             return
-            
+
         email = str(payload.get("email", "")).strip().lower()
         if not email:
             self.respond(400, {"message": "Email is required."})
@@ -606,7 +706,7 @@ class DataHandler(BaseHTTPRequestHandler):
         updated = False
         updates = []
         params = []
-        
+
         if "bio" in payload:
             val = str(payload.get("bio", "")).strip()
             if contains_vulgarity(val):
@@ -615,54 +715,60 @@ class DataHandler(BaseHTTPRequestHandler):
             updates.append("bio = %s")
             params.append(censor_text(val) if val else "")
             updated = True
-            
+
         if "cleanliness" in payload:
             updates.append("cleanliness = %s")
             params.append(str(payload.get("cleanliness", "")).strip())
             updated = True
-            
+
         if "sleepSchedule" in payload:
             updates.append("sleep_schedule = %s")
             params.append(str(payload.get("sleepSchedule", "")).strip())
             updated = True
-            
+
         if "roommateStatus" in payload:
             updates.append("roommate_status = %s")
             params.append(str(payload.get("roommateStatus", "")).strip())
             updated = True
-        
+
         if not updated:
             self.respond(400, {"message": "No roommate fields to update."})
             return
 
         params.append(email)
-        
+
         try:
             with get_db() as conn:
                 with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                    cur.execute(f"""
+                    cur.execute(
+                        f"""
                         UPDATE users
                         SET {", ".join(updates)}
                         WHERE email = %s
                         RETURNING first_name, last_name, red_id, email, bio
-                    """, tuple(params))
+                    """,
+                        tuple(params),
+                    )
                     updated_user = cur.fetchone()
-                    
+
                 if not updated_user:
                     self.respond(404, {"message": "User not found."})
                     return
                 conn.commit()
 
-            self.respond(200, {
-                "message": "Roommate profile saved.",
-                "user": {
-                    "firstName": updated_user["first_name"],
-                    "lastName": updated_user["last_name"],
-                    "redId": updated_user["red_id"],
-                    "email": updated_user["email"],
-                    "bio": updated_user.get("bio", "")
-                }
-            })
+            self.respond(
+                200,
+                {
+                    "message": "Roommate profile saved.",
+                    "user": {
+                        "firstName": updated_user["first_name"],
+                        "lastName": updated_user["last_name"],
+                        "redId": updated_user["red_id"],
+                        "email": updated_user["email"],
+                        "bio": updated_user.get("bio", ""),
+                    },
+                },
+            )
         except Exception as e:
             self.respond(500, {"message": "Failed to update roommate profile."})
 
@@ -675,7 +781,7 @@ class DataHandler(BaseHTTPRequestHandler):
         if not listing_id:
             self.respond(400, {"message": "listing id is required."})
             return
-            
+
         try:
             listing_id = int(listing_id)
         except (ValueError, TypeError):
@@ -684,14 +790,16 @@ class DataHandler(BaseHTTPRequestHandler):
 
         updates = []
         params = []
-        
+
         if "price" in payload:
             updates.append("price = %s")
             params.append(clamp_price(payload["price"]))
         if "description" in payload:
             desc = str(payload["description"]).strip()
             if contains_vulgarity(desc):
-                self.respond(400, {"message": "Description contains inappropriate language."})
+                self.respond(
+                    400, {"message": "Description contains inappropriate language."}
+                )
                 return
             updates.append("description = %s")
             params.append(censor_text(desc))
@@ -708,24 +816,27 @@ class DataHandler(BaseHTTPRequestHandler):
         if "availability" in payload:
             updates.append("availability = %s")
             params.append(str(payload["availability"]).strip())
-            
+
         if not updates:
             self.respond(400, {"message": "No fields to update."})
             return
-            
+
         params.append(listing_id)
-        
+
         try:
             with get_db() as conn:
                 with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                    cur.execute(f"""
+                    cur.execute(
+                        f"""
                         UPDATE listings
                         SET {", ".join(updates)}
                         WHERE id = %s
                         RETURNING *
-                    """, tuple(params))
+                    """,
+                        tuple(params),
+                    )
                     updated_db_listing = cur.fetchone()
-                    
+
                 if not updated_db_listing:
                     self.respond(404, {"message": "Listing not found."})
                     return
@@ -750,9 +861,17 @@ class DataHandler(BaseHTTPRequestHandler):
             if updated_db_listing.get("owner_email"):
                 listing_to_update["ownerEmail"] = updated_db_listing["owner_email"]
             if updated_db_listing.get("roommate_status"):
-                listing_to_update["roommateStatus"] = updated_db_listing["roommate_status"]
+                listing_to_update["roommateStatus"] = updated_db_listing[
+                    "roommate_status"
+                ]
 
-            self.respond(200, {"message": "Listing updated successfully.", "listing": listing_to_update})
+            self.respond(
+                200,
+                {
+                    "message": "Listing updated successfully.",
+                    "listing": listing_to_update,
+                },
+            )
         except Exception as e:
             self.respond(500, {"message": "Failed to update listing."})
 
@@ -760,22 +879,24 @@ class DataHandler(BaseHTTPRequestHandler):
         payload = self.read_json()
         if payload is None:
             return
-            
+
         listing_id = payload.get("listingId")
         if not listing_id:
             self.respond(400, {"message": "listingId is required."})
             return
-            
+
         try:
             listing_id = int(listing_id)
         except (ValueError, TypeError):
             self.respond(400, {"message": "Invalid listingId."})
             return
-            
+
         try:
             with get_db() as conn:
                 with conn.cursor() as cur:
-                    cur.execute("DELETE FROM listings WHERE id = %s RETURNING id", (listing_id,))
+                    cur.execute(
+                        "DELETE FROM listings WHERE id = %s RETURNING id", (listing_id,)
+                    )
                     if not cur.fetchone():
                         self.respond(404, {"message": "Listing not found."})
                         return
@@ -859,14 +980,19 @@ class DataHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         return  # silence
 
+
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
+
 
 def run():
     server = ThreadingHTTPServer((HOST, PORT), DataHandler)
     print(f"Data server running at http://{HOST}:{PORT}")
     server.serve_forever()
 
+
 if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
     run()
