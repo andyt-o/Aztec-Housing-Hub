@@ -42,3 +42,7 @@ CREATE TABLE IF NOT EXISTS zipcodes (
     zip VARCHAR(10) PRIMARY KEY,
     city VARCHAR(255) NOT NULL
 );
+
+CREATE INDEX IF NOT EXISTS idx_listings_owner_email ON listings(owner_email);
+CREATE INDEX IF NOT EXISTS idx_listing_click_history_listing_id ON listing_click_history(listing_id);
+CREATE INDEX IF NOT EXISTS idx_listing_click_history_date ON listing_click_history(date);

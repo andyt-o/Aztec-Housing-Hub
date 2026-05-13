@@ -25,8 +25,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-HOST = "127.0.0.1"
-PORT = 5000
+HOST = os.getenv("HOST", "0.0.0.0")
+PORT = int(os.getenv("PORT", 5000))
 DATA_DIR = Path(__file__).parent / "data"
 RED_ID_PATTERN = re.compile(r"^\d{9}$")
 MAX_BODY_BYTES = 64 * 1024
@@ -211,13 +211,14 @@ class DataHandler(BaseHTTPRequestHandler):
                 with conn.cursor(cursor_factory=RealDictCursor) as cur:
                     cur.execute("""
                         SELECT l.*, u.bio as poster_bio,
-                               COALESCE(
-                                   (SELECT json_agg(json_build_object('date', ch.date, 'count', ch.count))
-                                    FROM listing_click_history ch WHERE ch.listing_id = l.id),
-                                   '[]'::json
-                               ) as click_history
+                               COALESCE(ch_agg.history, '[]'::json) as click_history
                         FROM listings l
                         LEFT JOIN users u ON l.owner_email = u.email
+                        LEFT JOIN (
+                            SELECT listing_id, json_agg(json_build_object('date', date, 'count', count)) as history
+                            FROM listing_click_history
+                            GROUP BY listing_id
+                        ) ch_agg ON l.id = ch_agg.listing_id
                     """)
                     rows = cur.fetchall()
 
@@ -993,6 +994,4 @@ def run():
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
     run()
