@@ -3,5 +3,3 @@ client/dist
 Backend/data/users.json
 Backend/.env
 .env
-@chatlog.md 
-CHATLOG.md
