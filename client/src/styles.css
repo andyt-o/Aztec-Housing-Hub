@@ -519,8 +519,349 @@ img {
   background: var(--surface);
 }
 
-.section-heading {
-  margin-bottom: 1rem;
+.section-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.15rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.section-icon {
+  font-size: 1.2rem;
+}
+
+.section-subtitle {
+  margin: 0 0 1rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* ── Profile header ── */
+.profile-header-block {
+  background: linear-gradient(135deg, rgba(157, 34, 53, 0.06), rgba(157, 34, 53, 0.02));
+}
+
+.profile-header-inner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.profile-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(157, 34, 53, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.profile-avatar-placeholder {
+  font-size: 1.8rem;
+}
+
+.profile-header-info {
+  flex: 1;
+  min-width: 150px;
+}
+
+.profile-name {
+  margin: 0 0 0.25rem;
+  font-size: 1.2rem;
+}
+
+.profile-meta {
+  margin: 0.1rem 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.profile-meta-value {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.profile-signout-btn {
+  margin-left: auto;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+}
+
+/* ── Card footer row (clicks + action button) ── */
+.card-footer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.6rem;
+  gap: 0.5rem;
+}
+
+.card-clicks {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* ── Engagement badge in modal ── */
+.modal-engagement {
+  margin-bottom: 0.75rem;
+}
+
+.engagement-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(157, 34, 53, 0.08);
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+}
+
+/* ── Detail row for long descriptions ── */
+.detail-row-description {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.detail-row-description .detail-value {
+  line-height: 1.5;
+  font-size: 0.9rem;
+  color: #444;
+}
+
+/* ── Detail sections (inside listing modal) ── */
+.detail-section {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+}
+
+.detail-section:first-child {
+  margin-top: 0.5rem;
+  padding-top: 0;
+}
+
+.detail-section-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.detail-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+  font-size: 0.88rem;
+}
+
+.detail-icon {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+}
+
+.detail-label {
+  flex-shrink: 0;
+  width: 100px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.detail-value {
+  color: var(--text);
+  font-size: 0.88rem;
+}
+
+.detail-description {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: #444;
+}
+
+.detail-link {
+  color: var(--accent);
+  font-size: 0.88rem;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.detail-link:hover {
+  text-decoration: underline;
+}
+
+.detail-link-icon {
+  font-size: 0.75rem;
+  vertical-align: super;
+}
+
+/* ── Profile form extras ── */
+.pref-textarea {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 100px;
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--text);
+  width: 100%;
+}
+
+.pref-textarea:focus {
+  outline: 2px solid rgba(157, 34, 53, 0.3);
+  border-color: var(--accent);
+}
+
+/* ── Dashboard: clicks inline ── */
+.dash-listing-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.dash-listing-clicks {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.3);
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+}
+
+.dash-listing-author {
+  font-size: 0.78rem;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-style: italic;
+}
+
+/* ── Delete button ── */
+.btn-delete {
+  background: #2c3e50;
+  color: #fff;
+  border: none;
+  padding: 0.3rem 0.7rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.btn-delete:hover {
+  background: #1a252f;
+}
+
+.btn-view {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 0.3rem 0.7rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.btn-view:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* ── Click graph ── */
+.click-graph-section {
+  margin-top: 1rem;
+}
+
+.click-graph-row {
+  margin-bottom: 1.25rem;
+}
+
+.click-graph-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+.click-graph-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.click-graph-total {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.click-graph-bar-wrap {
+  height: 8px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.click-graph-bar {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.click-graph-days {
+  display: flex;
+  gap: 2px;
+  align-items: flex-end;
+  height: 48px;
+}
+
+.click-day-bar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  min-width: 0;
+}
+
+.click-day-fill {
+  width: 100%;
+  min-width: 3px;
+  border-radius: 2px 2px 0 0;
+  transition: height 0.4s ease;
+}
+
+.click-day-label {
+  font-size: 0.55rem;
+  color: var(--muted);
+  margin-top: 2px;
+  white-space: nowrap;
+  transform: rotate(-35deg);
+  transform-origin: top center;
 }
 
 .listings-section h4 {
@@ -1739,6 +2080,15 @@ img {
   font-size: 0.88rem;
 }
 
+.card-author {
+  margin: 0.15rem 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
 .card-availability {
   margin: 0.25rem 0 0;
   font-size: 0.85rem;
@@ -1815,6 +2165,15 @@ img {
   font-size: 0.8rem;
   color: #888;
   margin-top: 0.25rem;
+}
+
+/* Full-width zipcode override */
+label.zipcode-full-width {
+  grid-column: 1 / -1;
+}
+
+label.zipcode-full-width input {
+  width: 100%;
 }
 
 .form-row {
@@ -2152,60 +2511,6 @@ img {
   gap: 1rem;
 }
 
-/* ── Roommates page ── */
-.roommates-page {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 1.5rem;
-}
-
-.matches-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.match-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 1.25rem;
-  transition: box-shadow 0.2s;
-}
-
-.match-card:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-}
-
-.match-info {
-  margin-bottom: 0.5rem;
-}
-
-.match-name {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 600;
-}
-
-.match-score {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: var(--accent);
-}
-
-.compatibility-details {
-  margin-top: 0.75rem;
-  font-size: 0.85rem;
-  color: var(--muted);
-}
-
-.detail-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 0.25rem 0;
-}
-
 /* ── ListingsPage banner ── */
 .listings-page .page-banner {
   width: 100%;
@@ -2271,6 +2576,59 @@ img {
 .modal-cta {
   text-align: center;
   margin-top: 1.25rem;
+}
+
+/* ── Modal Header ── */
+.modal-header {
+  text-align: center;
+  margin-bottom: 0.75rem;
+}
+
+.modal-type-badge {
+  display: inline-block;
+  padding: 0.2rem 0.7rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--accent);
+  margin-bottom: 0.5rem;
+}
+
+.modal-title {
+  margin: 0 0 0.5rem;
+  color: var(--text);
+  font-size: 1.2rem;
+}
+
+.modal-posted-by {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.modal-posted-by strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.modal-email-link a {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.modal-email-link a:hover {
+  text-decoration: underline;
+}
+
+/* ── Detail tile (inside modal) ── */
+.listing-detail-tile {
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--border);
 }
 
 .modal-contact-section {

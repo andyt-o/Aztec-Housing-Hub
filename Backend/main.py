@@ -10,9 +10,12 @@ import hmac
 import json
 import os
 import re
+import random
 import threading
+from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import urlparse, parse_qs
 
 from better_profanity import profanity
 
@@ -81,11 +84,6 @@ def _save_json(name: str, data: object) -> None:
 def _save_listings(data: dict) -> None:
     """Persist listings data to disk atomically."""
     _save_json("listings.json", data)
-
-
-def _save_roommates(data: list) -> None:
-    """Persist roommates data to disk atomically."""
-    _save_json("roommates.json", data)
 
 
 # ---------------------------------------------------------------------------
@@ -180,6 +178,10 @@ def validate_signup(payload: dict, users: list) -> tuple:
         "redId": red_id,
         "email": email,
         "password": password,
+        "cleanliness": "Moderately clean",
+        "sleepSchedule": "Night owl",
+        "bio": "",
+        "hobbies": "",
     }
 
 
@@ -195,6 +197,20 @@ def validate_login(payload: dict) -> tuple:
     return errors, email, password
 
 
+def _user_to_dict(user: dict) -> dict:
+    """Convert a stored user record to the public-facing user dict."""
+    return {
+        "firstName": user.get("firstName", ""),
+        "lastName": user.get("lastName", ""),
+        "redId": user.get("redId", ""),
+        "email": user.get("email", ""),
+        "cleanliness": user.get("cleanliness", ""),
+        "sleepSchedule": user.get("sleepSchedule", ""),
+        "bio": user.get("bio", ""),
+        "hobbies": user.get("hobbies", ""),
+    }
+
+
 # ---------------------------------------------------------------------------
 # HTTP handler
 # ---------------------------------------------------------------------------
@@ -207,20 +223,24 @@ class DataHandler(BaseHTTPRequestHandler):
     _GET_ROUTES = {
         "/api/health": "_handle_health",
         "/api/listings": "_handle_listings",
-        "/api/roommates": "_handle_roommates",
         "/api/config": "_handle_config",
         "/api/zipcodes": "_handle_zipcodes",
+        "/api/click-history": "_handle_click_history",
     }
     _POST_ROUTES = {
         "/api/signup": "_handle_signup",
         "/api/login": "_handle_login",
         "/api/track-click": "_handle_track_click",
         "/api/add-listing": "_handle_add_listing",
-        "/api/add-roommate": "_handle_add_roommate",
         "/api/profanity-check": "_handle_profanity_check",
     }
     _PUT_ROUTES = {
         "/api/update-name": "_handle_update_name",
+        "/api/update-roommate": "_handle_update_roommate",
+    }
+
+    _DELETE_ROUTES = {
+        "/api/delete-listing": "_handle_delete_listing",
     }
 
     def __init__(self, *args, **kwargs):
@@ -277,13 +297,22 @@ class DataHandler(BaseHTTPRequestHandler):
         if data is None:
             self.respond(500, {"message": "listings data not found"})
             return
-        self.respond(200, data)
 
-    def _handle_roommates(self):
-        data = _load_json("roommates.json")
-        if data is None:
-            self.respond(500, {"message": "roommates data not found"})
-            return
+        # Enrich each listing with poster's roommate profile
+        users = load_users()
+        email_to_user = {u.get("email", ""): u for u in users}
+
+        for section in ("onCampus", "offCampus"):
+            for listing in data.get(section, []):
+                owner_email = listing.get("ownerEmail", "")
+                poster = email_to_user.get(owner_email)
+                if poster:
+                    listing["posterRoommateStatus"] = poster.get("roommateStatus", "")
+                    listing["posterBio"] = poster.get("bio", "")
+                    listing["posterHobbies"] = poster.get("hobbies", "")
+                    listing["posterCleanliness"] = poster.get("cleanliness", "")
+                    listing["posterSleepSchedule"] = poster.get("sleepSchedule", "")
+
         self.respond(200, data)
 
     def _handle_config(self):
@@ -303,7 +332,7 @@ class DataHandler(BaseHTTPRequestHandler):
     # -- POST handlers ------------------------------------------------------
 
     def _handle_profanity_check(self):
-        """Check a text string for profanity.  Expects {"text": "..."}."""
+        """Check a text string for profanity.  Expects {"text": "...."}."""
         payload = self.read_json()
         if payload is None:
             return
@@ -330,26 +359,25 @@ class DataHandler(BaseHTTPRequestHandler):
                 )
                 return
             password_data = hash_password(cleaned["password"])
-            users.append(
-                {
-                    "firstName": censor_text(cleaned["firstName"]),
-                    "lastName": censor_text(cleaned["lastName"]),
-                    "redId": cleaned["redId"],
-                    "email": cleaned["email"],
-                    "password": password_data,
-                }
-            )
+            new_user = {
+                "firstName": censor_text(cleaned["firstName"]),
+                "lastName": censor_text(cleaned["lastName"]),
+                "redId": cleaned["redId"],
+                "email": cleaned["email"],
+                "password": password_data,
+                "cleanliness": cleaned.get("cleanliness", "Moderately clean"),
+                "sleepSchedule": cleaned.get("sleepSchedule", "Night owl"),
+                "bio": cleaned.get("bio", ""),
+                "hobbies": cleaned.get("hobbies", ""),
+                "roommateStatus": cleaned.get("roommateStatus", ""),
+            }
+            users.append(new_user)
             save_users(users)
         self.respond(
             201,
             {
                 "message": "Account created successfully.",
-                "user": {
-                    "firstName": censor_text(cleaned["firstName"]),
-                    "lastName": censor_text(cleaned["lastName"]),
-                    "redId": cleaned["redId"],
-                    "email": cleaned["email"],
-                },
+                "user": _user_to_dict(new_user),
             },
         )
 
@@ -379,12 +407,7 @@ class DataHandler(BaseHTTPRequestHandler):
             200,
             {
                 "message": "Login successful.",
-                "user": {
-                    "firstName": user["firstName"],
-                    "lastName": user["lastName"],
-                    "redId": user["redId"],
-                    "email": user["email"],
-                },
+                "user": _user_to_dict(user),
             },
         )
 
@@ -413,12 +436,48 @@ class DataHandler(BaseHTTPRequestHandler):
             200,
             {
                 "message": "Name updated successfully.",
-                "user": {
-                    "firstName": user["firstName"],
-                    "lastName": user["lastName"],
-                    "redId": user["redId"],
-                    "email": user["email"],
-                },
+                "user": _user_to_dict(user),
+            },
+        )
+
+    def _handle_update_roommate(self):
+        """Update the logged-in user's roommate profile fields."""
+        payload = self.read_json()
+        if payload is None:
+            return
+        email = str(payload.get("email", "")).strip().lower()
+        if not email:
+            self.respond(400, {"message": "Email is required."})
+            return
+
+        users = load_users()
+        user = next((u for u in users if u.get("email") == email), None)
+        if not user:
+            self.respond(404, {"message": "User not found."})
+            return
+
+        # Update roommate-profile fields if present
+        roommate_fields = ["cleanliness", "sleepSchedule", "bio", "hobbies", "roommateStatus"]
+        updated = False
+        for field in roommate_fields:
+            if field in payload:
+                value = str(payload.get(field, "")).strip()
+                # Censor user-generated text fields
+                if field in ("bio", "hobbies") and value:
+                    value = censor_text(value)
+                user[field] = value
+                updated = True
+
+        if not updated:
+            self.respond(400, {"message": "No roommate fields to update."})
+            return
+
+        save_users(users)
+        self.respond(
+            200,
+            {
+                "message": "Roommate profile saved.",
+                "user": _user_to_dict(user),
             },
         )
 
@@ -440,7 +499,6 @@ class DataHandler(BaseHTTPRequestHandler):
         placement = str(payload.get("placement", "offCampus")).strip()
         owner_email = str(payload.get("ownerEmail", "")).strip()
         roommate_status = str(payload.get("roommateStatus", "")).strip()
-
 
         errors = {}
         if not title:
@@ -479,8 +537,6 @@ class DataHandler(BaseHTTPRequestHandler):
         if data is None:
             data = {"onCampus": [], "offCampus": []}
 
-        import random
-
         new_id = random.randint(1000000000, 9999999999)
         while any(
             existing.get("id") == new_id
@@ -514,56 +570,6 @@ class DataHandler(BaseHTTPRequestHandler):
             201, {"message": "Listing created successfully.", "listing": new_listing}
         )
 
-    def _handle_add_roommate(self):
-        """Persist a new roommate profile submitted by a logged-in user."""
-        payload = self.read_json()
-        if payload is None:
-            return
-
-        hobbies = str(payload.get("hobbies", "")).strip()
-        cleanliness = str(payload.get("cleanliness", "")).strip()
-        sleep_schedule = str(payload.get("sleepSchedule", "")).strip()
-        user_email = str(payload.get("email", "")).strip()
-
-        errors = {}
-        if contains_vulgarity(hobbies):
-            errors["hobbies"] = "Hobbies contain inappropriate language."
-
-        if errors:
-            self.respond(
-                400,
-                {"message": "Please fix the highlighted fields.", "errors": errors},
-            )
-            return
-
-        data = _load_json("roommates.json")
-        if data is None:
-            data = []
-
-        import random
-
-        new_id = random.randint(1000000000, 9999999999)
-        while any(existing.get("id") == new_id for existing in data):
-            new_id = random.randint(1000000000, 9999999999)
-
-        new_profile = {
-            "id": new_id,
-            "email": user_email,
-            "hobbies": censor_text(hobbies),
-            "cleanliness": cleanliness,
-            "sleepSchedule": sleep_schedule,
-        }
-        data.append(new_profile)
-        _save_roommates(data)
-
-        self.respond(
-            201,
-            {
-                "message": "Roommate profile created successfully.",
-                "profile": new_profile,
-            },
-        )
-
     def _handle_track_click(self):
         payload = self.read_json()
         if payload is None:
@@ -581,6 +587,17 @@ class DataHandler(BaseHTTPRequestHandler):
             for listing in data.get(section, []):
                 if listing.get("id") == listing_id:
                     listing["clicks"] = (listing.get("clicks") or 0) + 1
+                    # Record per-day click history
+                    today = datetime.utcnow().strftime("%Y-%m-%d")
+                    click_history = listing.get("clickHistory", [])
+                    if click_history and click_history[-1].get("date") == today:
+                        click_history[-1]["count"] += 1
+                    else:
+                        click_history.append({"date": today, "count": 1})
+                    listing["clickHistory"] = click_history
+                    # Trim to last 90 days
+                    if len(click_history) > 90:
+                        click_history[:] = click_history[-90:]
                     found = True
                     break
             if found:
@@ -590,6 +607,66 @@ class DataHandler(BaseHTTPRequestHandler):
             return
         _save_listings(data)
         self.respond(200, {"message": "Click tracked."})
+
+    def _handle_click_history(self):
+        query = self.query_string_parsed()
+        listing_id = query.get("listingId")
+        if listing_id is None:
+            self.respond(400, {"message": "listingId is required."})
+            return
+        try:
+            listing_id = int(listing_id)
+        except (ValueError, TypeError):
+            self.respond(400, {"message": "Invalid listingId."})
+            return
+        data = _load_json("listings.json")
+        if data is None:
+            self.respond(500, {"message": "listings data not found"})
+            return
+        found = False
+        history = []
+        for section in ("onCampus", "offCampus"):
+            for listing in data.get(section, []):
+                if listing.get("id") == listing_id:
+                    found = True
+                    history = listing.get("clickHistory", [])
+                    break
+            if found:
+                break
+        if not found:
+            self.respond(404, {"message": "Listing not found."})
+            return
+        self.respond(200, {"history": history})
+
+    def _handle_delete_listing(self):
+        payload = self.read_json()
+        if payload is None:
+            return
+        listing_id = payload.get("listingId")
+        if listing_id is None:
+            self.respond(400, {"message": "listingId is required."})
+            return
+        try:
+            listing_id = int(listing_id)
+        except (ValueError, TypeError):
+            self.respond(400, {"message": "Invalid listingId."})
+            return
+        data = _load_json("listings.json")
+        if data is None:
+            self.respond(500, {"message": "listings data not found"})
+            return
+        found = False
+        for section in ("onCampus", "offCampus"):
+            original_len = len(data.get(section, []))
+            data[section] = [l for l in data.get(section, []) if l.get("id") != listing_id]
+            if len(data[section]) < original_len:
+                found = True
+                break
+        if not found:
+            self.respond(404, {"message": "Listing not found."})
+            return
+        _save_listings(data)
+        self.respond(200, {"message": "Listing deleted successfully."})
 
     # -- PUT handler --------------------------------------------------------
 
@@ -614,6 +691,13 @@ class DataHandler(BaseHTTPRequestHandler):
             self.respond(404, {"message": "Not found."})
 
     def do_PUT(self):
+        handler = self._route()
+        if handler:
+            getattr(self, handler)()
+        else:
+            self.respond(404, {"message": "Not found."})
+
+    def do_DELETE(self):
         handler = self._route()
         if handler:
             getattr(self, handler)()
@@ -653,6 +737,11 @@ class DataHandler(BaseHTTPRequestHandler):
             self.send_header("Connection", "close")
         self.end_headers()
         self.wfile.write(body)
+
+    def query_string_parsed(self):
+        """Parse query string parameters into a dict."""
+        parsed = urlparse(self.path)
+        return dict(parse_qs(parsed.query))
 
     def log_message(self, format, *args):
         return  # silence

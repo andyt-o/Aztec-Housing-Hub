@@ -21,17 +21,14 @@ function UserIcon({ size = 18 }) {
   );
 }
 
-function linkToHash(link) {
+const linkToHash = (link) => {
   const map = {
     "Home": "",
     "Listings": "listings",
     "Add Listing": "add-listing",
-    "Roommates": "roommates",
-    "Login / Signup": "auth",
-    "Profile": "profile",
   };
   return "#/" + (map[link] ?? "");
-}
+};
 
 export default function Navbar({
   navLinks,
@@ -48,13 +45,14 @@ export default function Navbar({
 
   // Gate links based on auth state
   // "Login / Signup" is handled by the account trigger button — exclude from nav links
-  // Roommates, Add Listing only show when authenticated
-  const authOnlyLinks = new Set(["Roommates", "Add Listing"]);
+  // Add Listing only shows when authenticated
+  const authOnlyLinks = new Set(["Add Listing"]);
   const loginSignupLink = "Login / Signup";
   const visibleLinks = navLinks.filter((link) => {
     if (link === loginSignupLink) return false;
     if (authOnlyLinks.has(link)) return !!currentUser;
-    return true;
+    // "Profile" is no longer a nav link — user icon handles profile access
+    return link !== "Profile";
   });
 
   function handleAccountClick() {
@@ -87,8 +85,7 @@ export default function Navbar({
             const isActive =
               (link === "Home" && currentPage === "home") ||
               (link === "Listings" && currentPage === "listings") ||
-              (link === "Add Listing" && currentPage === "add-listing") ||
-              (link === "Roommates" && currentPage === "roommates");
+              (link === "Add Listing" && currentPage === "add-listing");
 
             return (
               <a

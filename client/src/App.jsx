@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import "./styles.css";
 import sdsuLogo from "./assets/sdsulogo.jpg";
 import AppShell from "./components/AppShell";
@@ -8,10 +8,8 @@ import ListingsPage from "./components/pages/ListingsPage";
 import AddListing from "./components/pages/AddListing";
 import AuthPage from "./components/pages/AuthPage";
 import ProfilePage from "./components/pages/ProfilePage";
-import RoommatesPage from "./components/pages/RoommatesPage";
 import LoadingSpinner from "./components/shared/LoadingSpinner";
 import ErrorBanner from "./components/shared/ErrorBanner";
-import { calculateCompatibility } from "./components/shared/compatibility";
 import { checkProfanity } from "./utils/profanity";
 
 // Proxy prefix for Vite dev server (see vite.config.js).
@@ -63,7 +61,6 @@ export default function App() {
   // ── Data fetched from backend API ──
   const [onCampusHousing, setOnCampusHousing] = useState([]);
   const [offCampusListings, setOffCampusListings] = useState([]);
-  const [roommateProfiles, setRoommateProfiles] = useState([]);
   const [appConfig, setAppConfig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -89,7 +86,6 @@ export default function App() {
         "": "home",
         listings: "listings",
         "add-listing": "add-listing",
-        roommates: "roommates",
         auth: "auth",
         "auth-signup": "auth",
         profile: "profile",
@@ -105,25 +101,21 @@ export default function App() {
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
 
-  // ── Fetch all data from backend on mount ──
+  // ── Fetch all data from backend API on mount ──
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        const [listingsRes, roommatesRes, configRes] = await Promise.all([
+        const [listingsRes, configRes] = await Promise.all([
           fetch(buildUrl("/listings")),
-          fetch(buildUrl("/roommates")),
           fetch(buildUrl("/config")),
         ]);
 
         if (!listingsRes.ok)
           throw new Error(`Failed to load listings (${listingsRes.status})`);
-        if (!roommatesRes.ok)
-          throw new Error(`Failed to load roommates (${roommatesRes.status})`);
         if (!configRes.ok)
           throw new Error(`Failed to load config (${configRes.status})`);
 
         const listings = await listingsRes.json();
-        const roommates = await roommatesRes.json();
         const config = await configRes.json();
 
         // Censor all user-generated text before storing in state (defensive)
@@ -131,11 +123,9 @@ export default function App() {
           onCampus: await deepCensor(listings.onCampus || []),
           offCampus: await deepCensor(listings.offCampus || []),
         };
-        const safeRoommates = await deepCensor(roommates || []);
 
         setOnCampusHousing(safeListings.onCampus);
         setOffCampusListings(safeListings.offCampus);
-        setRoommateProfiles(safeRoommates);
         setAppConfig(config || {});
         setSignupForm(config.emptySignupForm || {});
         setLoginForm(config.emptyLoginForm || {});
@@ -194,7 +184,6 @@ export default function App() {
     "add-listing": "add-listing",
     auth: "auth",
     profile: "profile",
-    roommates: "roommates",
   };
 
   function navigateTo(page) {
@@ -224,31 +213,21 @@ export default function App() {
       if (!currentUser) navigateTo("auth");
       return;
     }
-    if (link === "Profile") {
-      if (currentUser) {
-        navigateTo("profile");
-      } else {
-        navigateTo("auth");
-        setGlobalMessage({
-          type: "error",
-          text: "Log in to edit your roommate profile.",
-        });
-      }
+    if (link === "Add Listing" && !currentUser) {
+      navigateTo("auth");
       return;
     }
-    if (link === "Roommates") {
-      if (currentUser) {
-        navigateTo("roommates");
-      } else {
-        navigateTo("auth");
-        setGlobalMessage({
-          type: "error",
-          text: "Log in to browse roommate matches.",
-        });
-      }
-      return;
-    }
-    navigateTo(link === "Home" ? "home" : link === "Listings" ? "listings" : link === "Add Listing" ? "add-listing" : "home");
+    navigateTo(
+      link === "Home"
+        ? "home"
+        : link === "Listings"
+        ? "listings"
+        : link === "Add Listing"
+        ? "add-listing"
+        : link === "Profile"
+        ? "profile"
+        : "home"
+    );
   }
 
   function handleSignOut() {
@@ -261,6 +240,15 @@ export default function App() {
     setLoginErrors({});
     setSignupErrors({});
     setGlobalMessage({ type: "success", text: "You have been signed out." });
+  }
+
+  function handleNavigateToProfile() {
+    if (currentUser) {
+      navigateTo("profile");
+    } else {
+      navigateTo("auth");
+    }
+    setIsAccountMenuOpen(false);
   }
 
   // Update user name via backend API
@@ -494,7 +482,7 @@ export default function App() {
   async function handleProfileSave(event) {
     event.preventDefault();
 
-    // Check profanity on hobbies before saving
+    // Check profanity on hobbies and description before saving
     if (profileForm.hobbies?.trim()) {
       const check = await checkProfanity(profileForm.hobbies.trim());
       if (check.isProfane) {
@@ -502,8 +490,79 @@ export default function App() {
         return;
       }
     }
+    if (profileForm.description?.trim()) {
+      const check = await checkProfanity(profileForm.description.trim());
+      if (check.isProfane) {
+        setProfileSaveMessage("Description contains inappropriate language and was not saved.");
+        return;
+      }
+    }
 
-    setProfileSaveMessage("Roommate profile saved.");
+    // Save roommate profile to backend
+    if (currentUser) {
+      try {
+        const response = await fetch(buildUrl("/update-roommate"), {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: currentUser.email,
+            roommateStatus: profileForm.roommateStatus || "",
+            bio: profileForm.description || "",
+            hobbies: profileForm.hobbies || "",
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          setProfileSaveMessage(data.message || "Failed to save profile.");
+          return;
+        }
+        setCurrentUser((prev) => ({
+          ...prev,
+          roommateStatus: profileForm.roommateStatus || "",
+          bio: profileForm.description || "",
+          hobbies: profileForm.hobbies || "",
+        }));
+      } catch {
+        setProfileSaveMessage("Could not reach the server. Profile not saved.");
+        return;
+      }
+    }
+
+    setProfileSaveMessage("Profile saved successfully!");
+  }
+
+  async function handleDeleteListing(listingId) {
+    try {
+      const response = await fetch(buildUrl("/delete-listing"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ listingId }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setGlobalMessage({
+          type: "error",
+          text: data.message || "Failed to delete listing.",
+        });
+        return;
+      }
+      // Remove listing from local state
+      setOffCampusListings((current) =>
+        current.filter((l) => l.id !== listingId)
+      );
+      setOnCampusHousing((current) =>
+        current.filter((l) => l.id !== listingId)
+      );
+      setGlobalMessage({
+        type: "success",
+        text: "Listing deleted successfully.",
+      });
+    } catch {
+      setGlobalMessage({
+        type: "error",
+        text: "Could not reach the server. Please try again.",
+      });
+    }
   }
 
   // ── Guard: server unreachable ──
@@ -517,27 +576,7 @@ export default function App() {
 
   // ── Page router ──
   function renderPage() {
-    const pageProps = {
-      onCampusHousing,
-      offCampusListings,
-      roommateProfiles,
-      appConfig,
-      cleanlinessOptions,
-      sleepScheduleOptions,
-      housingTypes,
-      priceRanges,
-      bedOptions,
-      preferences,
-      setPreferences,
-      profileForm,
-      setProfileForm,
-      profileSaveMessage,
-      handleAddListing,
-      handleProfileSave,
-      calculateCompatibility,
-};
-
-  switch (currentPage) {
+    switch (currentPage) {
       case "home":
         return (
           <HomePage
@@ -553,9 +592,15 @@ export default function App() {
       case "listings":
         return (
           <ListingsPage
-            {...pageProps}
-            onTrackClick={handleTrackClick}
+            onCampusHousing={onCampusHousing}
+            offCampusListings={offCampusListings}
+            housingTypes={housingTypes}
+            priceRanges={priceRanges}
+            bedOptions={bedOptions}
+            preferences={preferences}
+            setPreferences={setPreferences}
             currentUser={currentUser}
+            onTrackClick={handleTrackClick}
             navigateTo={navigateTo}
           />
         );
@@ -615,16 +660,6 @@ export default function App() {
             currentUser={currentUser}
           />
         );
-      case "roommates":
-        return (
-          <RoommatesPage
-            profileForm={profileForm}
-            roommateProfiles={roommateProfiles}
-            cleanlinessOptions={cleanlinessOptions}
-            sleepScheduleOptions={sleepScheduleOptions}
-            calculateCompatibility={calculateCompatibility}
-          />
-        );
       default:
         return null;
     }
@@ -640,6 +675,7 @@ export default function App() {
       onNavClick={handleNavClick}
       onToggleAccount={() => setIsAccountMenuOpen((o) => !o)}
       onSignOut={handleSignOut}
+      onNavigateToProfile={handleNavigateToProfile}
     >
       {renderPage()}
     </AppShell>

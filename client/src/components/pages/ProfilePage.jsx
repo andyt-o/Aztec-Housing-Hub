@@ -17,6 +17,15 @@ export default function ProfilePage({
 }) {
   const [hobbyError, setHobbyError] = useState("");
   const [keywordError, setKeywordError] = useState("");
+  const [descError, setDescError] = useState("");
+  const [statusError, setStatusError] = useState("");
+
+  const roommateStatusOptions = [
+    { value: "", label: "Not set" },
+    { value: "looking", label: "Looking for roommates" },
+    { value: "lookingToRoom", label: "Looking to room with others" },
+    { value: "notLooking", label: "Not looking for roommates" },
+  ];
 
   const handleHobbiesChange = (value) => {
     setProfileForm((c) => ({ ...c, hobbies: value }));
@@ -50,36 +59,60 @@ export default function ProfilePage({
     }
   };
 
+  const handleDescriptionChange = (value) => {
+    setProfileForm((c) => ({ ...c, description: value }));
+    if (descError) setDescError("");
+  };
+
+  const handleDescriptionBlur = async (value) => {
+    if (!value?.trim()) {
+      setDescError("");
+      return;
+    }
+    const result = await checkProfanity(value.trim());
+    if (result.isProfane) {
+      setDescError("Description contains inappropriate language.");
+    }
+  };
+
+  const handleStatusChange = (value) => {
+    setProfileForm((c) => ({ ...c, roommateStatus: value }));
+    if (statusError) setStatusError("");
+  };
+
   return (
     <>
       <div className="page-banner">
         <div className="page-banner-inner">
-          <p className="eyebrow">Roommate Profile</p>
+          <p className="eyebrow">Preferences</p>
           <h2>Set Your Preferences</h2>
-          <p>Tell other students about your lifestyle and habits.</p>
+          <p>Configure your housing search settings and tell others about yourself.</p>
         </div>
       </div>
 
       <main className="page-content">
         {/* User info */}
         {currentUser && (
-          <section className="section-block">
-            <h3 style={{ margin: "0 0 0.5rem" }}>Account Info</h3>
-            <div style={{ textAlign: "center" }}>
-              <strong style={{ fontSize: "1.1rem" }}>
-                {currentUser.firstName} {currentUser.lastName}
-              </strong>
-              <p style={{ color: "var(--muted)", fontSize: "0.85rem", margin: "0.25rem 0" }}>
-                Red ID: {currentUser.redId || "N/A"}
-              </p>
-              <p style={{ color: "var(--muted)", fontSize: "0.85rem", margin: "0.25rem 0" }}>
-                Email: {currentUser.email}
-              </p>
+          <section className="section-block profile-header-block">
+            <div className="profile-header-inner">
+              <div className="profile-avatar">
+                <span className="profile-avatar-placeholder">&#128100;</span>
+              </div>
+              <div className="profile-header-info">
+                <h3 className="profile-name">
+                  {currentUser.firstName} {currentUser.lastName}
+                </h3>
+                <p className="profile-meta">
+                  Red ID: <span className="profile-meta-value">{currentUser.redId || "N/A"}</span>
+                </p>
+                <p className="profile-meta">
+                  Email: <span className="profile-meta-value">{currentUser.email}</span>
+                </p>
+              </div>
               <button
                 type="button"
-                className="btn-accent"
+                className="btn-accent profile-signout-btn"
                 onClick={onSignOut}
-                style={{ marginTop: "0.75rem" }}
               >
                 Sign Out
               </button>
@@ -89,8 +122,10 @@ export default function ProfilePage({
 
         {/* Housing Preferences */}
         <section className="section-block">
-          <h3 style={{ margin: "0 0 0.5rem" }}>Housing Preferences</h3>
-          <p style={{ color: "var(--muted)", margin: "0 0 1rem", fontSize: "0.9rem" }}>
+          <h3 className="section-title">
+            <span className="section-icon">&#128205;</span> Housing Preferences
+          </h3>
+          <p className="section-subtitle">
             Set your preferences so we can recommend listings you&rsquo;re interested in.
           </p>
 
@@ -108,13 +143,13 @@ export default function ProfilePage({
                 }
                 className="pref-select"
               >
-                <option value="both">Both On-Campus & Off-Campus</option>
+                <option value="both">Both On-Campus &amp; Off-Campus</option>
                 <option value="onCampus">On-Campus Housing Only</option>
                 <option value="offCampus">Off-Campus Housing Only</option>
               </select>
             </div>
 
-            {/* Looking for housing checkbox — same layout as Housing Type */}
+            {/* Looking for housing checkbox */}
             <div className="pref-field-group">
               <div className="pref-field-header">Availability</div>
               <label className="pref-check">
@@ -173,9 +208,9 @@ export default function ProfilePage({
 
             {/* Keywords */}
             <div className="pref-field-group">
-              <div className="pref-field-header">Keywords</div>
+              <div className="pref-field-header">Search Keywords</div>
               <label className="auth-field">
-                <span>Search keywords</span>
+                <span>Keywords</span>
                 <input
                   type="text"
                   value={preferences.keywords || ""}
@@ -222,76 +257,72 @@ export default function ProfilePage({
           </div>
         </section>
 
-        {/* Roommate Profile */}
+        {/* Roommate Status & Description */}
         <section className="section-block">
-          <h3 style={{ margin: "0 0 0.5rem" }}>Roommate Profile</h3>
-          <p style={{ color: "var(--muted)", margin: "0 0 1rem", fontSize: "0.9rem" }}>
-            Tell other students about your lifestyle and habits.
+          <h3 className="section-title">
+            <span className="section-icon">&#127919;</span> About You &amp; Roommate Status
+          </h3>
+          <p className="section-subtitle">
+            Tell other students about yourself and what you&rsquo;re looking for in a living situation.
           </p>
 
-          <form className="roommate-form" onSubmit={onSave}>
-            <label className="auth-field">
-              <span>Hobbies (comma-separated)</span>
-              <input
-                type="text"
-                value={profileForm.hobbies}
-                onChange={(e) => handleHobbiesChange(e.target.value)}
-                onBlur={(e) => handleHobbiesBlur(e.target.value)}
-                placeholder="gym, cooking, gaming"
-                className={`pref-input${hobbyError ? " field-error-input" : ""}`}
-              />
-              {hobbyError && (
-                <small className="field-error">{hobbyError}</small>
-              )}
-            </label>
-
-            <div className="auth-form-grid">
-              <label className="auth-field">
-                <span>Cleanliness</span>
+          <div className="pref-form">
+            {/* Roommate Status */}
+            <div className="pref-field-group">
+              <div className="pref-field-header">Roommate Status</div>
+              <div className="auth-field">
+                <span>What best describes your situation?</span>
                 <select
-                  value={profileForm.cleanliness}
-                  onChange={(e) =>
-                    setProfileForm((c) => ({
-                      ...c,
-                      cleanliness: e.target.value,
-                    }))
-                  }
+                  value={profileForm.roommateStatus || ""}
+                  onChange={(e) => handleStatusChange(e.target.value)}
+                  className={`pref-select${statusError ? " field-error-input" : ""}`}
                 >
-                  {cleanlinessOptions.map((opt) => (
-                    <option key={opt}>{opt}</option>
+                  {roommateStatusOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
                   ))}
                 </select>
-              </label>
-              <label className="auth-field">
-                <span>Sleep schedule</span>
-                <select
-                  value={profileForm.sleepSchedule}
-                  onChange={(e) =>
-                    setProfileForm((c) => ({
-                      ...c,
-                      sleepSchedule: e.target.value,
-                    }))
-                  }
-                >
-                  {sleepScheduleOptions.map((opt) => (
-                    <option key={opt}>{opt}</option>
-                  ))}
-                </select>
-              </label>
+                {statusError && (
+                  <small className="field-error">{statusError}</small>
+                )}
+              </div>
             </div>
 
-            <button
-              className="auth-submit-btn profile-save-btn"
-              type="submit"
-            >
-              Save profile
-            </button>
-          </form>
+            {/* Description / About Me */}
+            <div className="pref-field-group">
+              <div className="pref-field-header">About Me</div>
+              <div className="auth-field">
+                <span>Tell us about yourself — hobbies, interests, lifestyle, what you like to do, etc.</span>
+                <textarea
+                  rows="5"
+                  value={profileForm.description || ""}
+                  onChange={(e) => handleDescriptionChange(e.target.value)}
+                  onBlur={(e) => handleDescriptionBlur(e.target.value)}
+                  placeholder="I love hiking, cooking, and studying at the library. I&rsquo;m a night owl who enjoys quiet spaces..."
+                  className={`pref-textarea${descError ? " field-error-input" : ""}`}
+                />
+                {descError && (
+                  <small className="field-error">{descError}</small>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
 
+        {/* Save button */}
+        <div className="form-actions">
+          <button
+            type="button"
+            className="btn-accent profile-save-btn"
+            onClick={onSave}
+          >
+            Save Preferences
+          </button>
           {saveMessage && (
             <p className="profile-save-message">{saveMessage}</p>
           )}
-        </section>
+        </div>
       </main>
     </>
   );

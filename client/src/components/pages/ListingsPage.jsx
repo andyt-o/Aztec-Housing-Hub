@@ -1,6 +1,19 @@
 import { useState } from "react";
 import { ContactListerPopup } from "../popups";
 
+const roommateStatusLabel = {
+  looking: "Looking for roommates",
+  lookingToRoom: "Looking to room with others",
+  notLooking: "Not looking for roommates",
+};
+
+const roommateStatusFilterOptions = [
+  { value: "all", label: "All" },
+  { value: "looking", label: "Looking for roommates" },
+  { value: "lookingToRoom", label: "Looking to room with others" },
+  { value: "notLooking", label: "Not looking for roommates" },
+];
+
 export default function ListingsPage({
   onCampusHousing = [],
   offCampusListings = [],
@@ -11,6 +24,7 @@ export default function ListingsPage({
   setPreferences,
   currentUser,
   navigateTo,
+  onTrackClick,
 }) {
   // ── Independent search state per panel ──
   const [onCampusSearch, setOnCampusSearch] = useState("");
@@ -23,6 +37,7 @@ export default function ListingsPage({
   const [selectedOffCampusPrice, setSelectedOffCampusPrice] = useState(0);
   const [selectedOnCampusBeds, setSelectedOnCampusBeds] = useState("Any");
   const [selectedOffCampusBeds, setSelectedOffCampusBeds] = useState("Any");
+  const [roommateStatusFilter, setRoommateStatusFilter] = useState("all");
 
   // ── Modal state ──
   const [selectedListing, setSelectedListing] = useState(null);
@@ -70,7 +85,9 @@ export default function ListingsPage({
     const matchesBeds =
       selectedOffCampusBeds === "Any" ||
       (selectedOffCampusBeds === "4+" ? listing.beds >= 4 : listing.beds === Number(selectedOffCampusBeds));
-    return matchesSearch && matchesType && matchesPrice && matchesBeds;
+    const matchesRoommateStatus =
+      roommateStatusFilter === "all" || listing.roommateStatus === roommateStatusFilter;
+    return matchesSearch && matchesType && matchesPrice && matchesBeds && matchesRoommateStatus;
   });
 
   function handlePlacementChange(value) {
@@ -79,16 +96,30 @@ export default function ListingsPage({
     }
   }
 
+  function handleListingClick(listing) {
+    if (onTrackClick) {
+      onTrackClick(listing.id);
+    }
+    if (listing.placement === "onCampus" && listing.url) {
+      window.open(listing.url, "_blank", "noopener,noreferrer");
+    } else if (!currentUser) {
+      navigateTo("auth");
+    } else {
+      setSelectedListing(listing);
+    }
+  }
+
   function handleContactClick(listing) {
     if (!currentUser) {
       navigateTo("auth");
       return;
     }
+    if (onTrackClick) onTrackClick(listing.id);
     setSelectedListing(listing);
   }
 
   // ── FilterSection ──
-  function FilterSection({ typeLabel, types, selectedType, onTypeChange, priceKey, bedKey }) {
+  function FilterSection({ typeLabel, types, selectedType, onTypeChange, priceKey, bedKey, showRoommateFilter }) {
     const isOnCampus = priceKey === "onCampus";
     const price = isOnCampus ? selectedOnCampusPrice : selectedOffCampusPrice;
     const setPrice = isOnCampus ? setSelectedOnCampusPrice : setSelectedOffCampusPrice;
@@ -143,6 +174,23 @@ export default function ListingsPage({
             </div>
           </div>
         </div>
+
+        {showRoommateFilter && (
+          <div className="filter-group">
+            <label>Roommate Status</label>
+            <select
+              className="filter-select"
+              value={roommateStatusFilter}
+              onChange={(e) => setRoommateStatusFilter(e.target.value)}
+            >
+              {roommateStatusFilterOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
     );
   }
@@ -193,29 +241,67 @@ export default function ListingsPage({
         ) : (
           <div className="listing-grid">
             {filteredOnCampus.map((listing) => (
-              <article className="listing-card" key={listing.id}>
+              <article
+                className="listing-card"
+                key={listing.id}
+                onClick={() => handleListingClick(listing)}
+                role="button"
+                tabIndex={0}
+                aria-label={`View ${listing.title}`}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleListingClick(listing);
+                  }
+                }}
+              >
                 <div className="card-type-badge">{listing.type || "Traditional"}</div>
                 <h4>{listing.title}</h4>
                 <p className="card-meta">{listing.area}</p>
                 <p className="card-meta">
                   {listing.beds} Bed / {listing.baths} Bath
                 </p>
-                <a
-                  className="contact-btn"
-                  style={{ marginTop: "0.75rem", display: "inline-block" }}
-                  href={listing.url || "https://housing.sdsu.edu/communities"}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  View on SDSU Housing &#8599;
-                </a>
+                <p className="card-author">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                  Posted by {(listing.ownerName || listing.ownerEmail || "").split("@")[0].replace(/[._]/g, " ") || "N/A"}
+                </p>
+                <div className="card-footer-row">
+                  <span className="card-clicks">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                    {listing.clicks ?? 0}
+                  </span>
+                  <a
+                    className="contact-btn"
+                    style={{ marginTop: "0", display: "inline-block" }}
+                    href={listing.url || "https://housing.sdsu.edu/communities"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onTrackClick) onTrackClick(listing.id);
+                    }}
+                  >
+                    View on SDSU Housing &#8599;
+                  </a>
+                </div>
               </article>
             ))}
           </div>
         )}
 
         <div className="on-campus-footer">
-          <a className="sdsu-link" href="https://housing.sdsu.edu/communities" target="_blank" rel="noopener noreferrer">
+          <a
+            className="sdsu-link"
+            href="https://housing.sdsu.edu/communities"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             View All SDSU Communities &#8599;
           </a>
         </div>
@@ -256,6 +342,7 @@ export default function ListingsPage({
           onTypeChange={setSelectedOffCampusType}
           priceKey="offCampus"
           bedKey="offCampus"
+          showRoommateFilter
         />
 
         {/* Sublease Hub */}
@@ -268,7 +355,20 @@ export default function ListingsPage({
             </p>
             <div className="listing-grid">
               {subleaseListings.map((listing) => (
-                <article className="listing-card" key={listing.id}>
+                <article
+                  className="listing-card"
+                  key={listing.id}
+                  onClick={() => handleListingClick(listing)}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`View ${listing.title}`}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleListingClick(listing);
+                    }
+                  }}
+                >
                   <div className="card-type-badge">Sublease</div>
                   <h4>{listing.title}</h4>
                   <p className="card-meta">
@@ -278,13 +378,30 @@ export default function ListingsPage({
                     {listing.beds} Bed / {listing.baths} Bath
                   </p>
                   <p className="card-description">{listing.description}</p>
-                  <button
-                    className="contact-btn"
-                    style={{ marginTop: "0.75rem", display: "inline-block", width: "100%" }}
-                    onClick={() => handleContactClick(listing)}
-                  >
-                    Contact Lister
-                  </button>
+                  {listing.roommateStatus && listing.roommateStatus !== "" && (
+                    <span className="roommate-status-badge">
+                      {roommateStatusLabel[listing.roommateStatus] || listing.roommateStatus}
+                    </span>
+                  )}
+                  <div className="card-footer-row">
+                    <span className="card-clicks">
+<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                      {listing.clicks ?? 0}
+                    </span>
+                    <button
+                      className="contact-btn"
+                      style={{ marginTop: "0", display: "inline-block", width: "auto", flexShrink: 0 }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleContactClick(listing);
+                      }}
+                    >
+                      Contact Lister
+                    </button>
+                  </div>
                 </article>
               ))}
             </div>
@@ -298,7 +415,20 @@ export default function ListingsPage({
         ) : (
           <div className="listing-grid">
             {filteredOffCampus.map((listing) => (
-              <article className="listing-card" key={listing.id}>
+              <article
+                className="listing-card"
+                key={listing.id}
+                onClick={() => handleListingClick(listing)}
+                role="button"
+                tabIndex={0}
+                aria-label={`View ${listing.title}`}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleListingClick(listing);
+                  }
+                }}
+              >
                 <div className="card-type-badge">{listing.type}</div>
                 <h4>{listing.title}</h4>
                 <p className="card-meta">
@@ -307,14 +437,38 @@ export default function ListingsPage({
                 <p className="card-meta">
                   {listing.beds} Bed / {listing.baths} Bath
                 </p>
-                <button
-                  className="contact-btn"
-                  style={{ marginTop: "0.75rem", display: "inline-block", width: "100%" }}
-                  onClick={() => handleContactClick(listing)}
-                >
-                  Contact Lister
-                </button>
-              </article>
+                {listing.roommateStatus && listing.roommateStatus !== "" && (
+                    <span className="roommate-status-badge">
+                      {roommateStatusLabel[listing.roommateStatus] || listing.roommateStatus}
+                    </span>
+                  )}
+                  <div className="card-footer-row">
+                    <span className="card-clicks">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                      {listing.clicks ?? 0}
+                    </span>
+                    <p className="card-author">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                      </svg>
+                      {(listing.ownerName || listing.ownerEmail || "").split("@")[0].replace(/[._]/g, " ") || "N/A"}
+                    </p>
+                  </div>
+                  <button
+                    className="contact-btn"
+                    style={{ marginTop: "0.75rem", display: "inline-block", width: "100%" }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleContactClick(listing);
+                    }}
+                  >
+                    Contact Lister
+                  </button>
+                </article>
             ))}
           </div>
         )}
@@ -371,6 +525,7 @@ export default function ListingsPage({
         <ContactListerPopup
           listing={selectedListing}
           onClose={() => setSelectedListing(null)}
+          onTrackClick={onTrackClick}
         />
       )}
     </>

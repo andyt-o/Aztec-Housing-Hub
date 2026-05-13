@@ -9,9 +9,9 @@ export default function AccountMenu({ user, onSignOut, onNavigateToProfile }) {
         <button
           type="button"
           className="account-dropdown-action"
-          onClick={onNavigateToProfile}
+          onClick={() => onNavigateToProfile?.()}
         >
-          Profile Settings
+          Profile
         </button>
         <button
           type="button"

@@ -9,6 +9,7 @@ export default function AppShell({
   onNavClick,
   onToggleAccount,
   onSignOut,
+  onNavigateToProfile,
 }) {
   return (
     <div className="app-shell">

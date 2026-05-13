@@ -20,15 +20,6 @@ const COLLAGE_STEPS = [
     gradient: "linear-gradient(135deg, #2c3e50 0%, #3498db 100%)",
     icon: "📝",
   },
-  {
-    step: 3,
-    label: "Connect with Roommates",
-    subtitle: "Match & connect",
-    description:
-      "Get matched with compatible roommates based on lifestyle, schedule, and habits.",
-    gradient: "linear-gradient(135deg, #1abc9c 0%, #16a085 100%)",
-    icon: "🤝",
-  },
 ];
 
 function Collage() {
@@ -40,7 +31,7 @@ function Collage() {
             How It Works
           </p>
           <h3 style={{ fontSize: "1.5rem", margin: "0.25rem 0" }}>
-            Three Steps to Housing
+            Two Steps to Housing
           </h3>
           <p style={{ color: "var(--muted)", margin: "0.25rem 0 0" }}>
             Your path to finding the perfect place near campus.
@@ -99,7 +90,13 @@ function Collage() {
 }
 
 /* ── Dashboard: My Listings Panel ── */
-function MyListingsPanel({ myListings, canCreateListing, navigateTo }) {
+function MyListingsPanel({ myListings, canCreateListing, onTrackClick, onDeleteListing, navigateTo }) {
+  const handleDelete = (listingId) => {
+    if (window.confirm("Are you sure you want to delete this listing?")) {
+      onDeleteListing(listingId);
+    }
+  };
+
   return (
     <div className="dash-panel">
       <div className="dash-panel-header">
@@ -128,20 +125,54 @@ function MyListingsPanel({ myListings, canCreateListing, navigateTo }) {
               <div className="dash-listing-main">
                 <div>
                   <h4>{listing.title}</h4>
-                  <p className="dash-listing-meta">
+                  <p className="card-meta">
                     {listing.area} &bull; {listing.beds}bd/{listing.baths}ba
                     &bull; ${(listing.price || 0).toLocaleString()}
                   </p>
+                  <p className="card-author">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                    Posted by {(listing.ownerName
+                      ? listing.ownerName.split(" ")[0]
+                      : (listing.ownerEmail || "").split("@")[0].replace(/[._]/g, " ") || "N/A")}
+                  </p>
                 </div>
-                <span className="dash-listing-badge">{listing.type}</span>
+                <div className="dash-listing-right">
+                  <span className="dash-listing-badge">{listing.type}</span>
+                  <span className="dash-listing-clicks">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                    {listing.clicks ?? 0}
+                  </span>
+                  <span className="dash-listing-author">
+                    {listing.ownerName
+                      ? listing.ownerName.split(" ")[0]
+                      : (listing.ownerEmail || "").split("@")[0].replace(/[._]/g, " ") || "N/A"}
+                  </span>
+                </div>
               </div>
               <div className="dash-listing-actions">
                 <button
-                  className="btn-secondary"
-                  style={{ fontSize: "0.8rem", padding: "0.3rem 0.7rem" }}
-                  onClick={() => navigateTo("listings")}
+                  className="btn-view"
+                  style={{ fontSize: "0.8rem", padding: "0.3rem 0.7rem", marginRight: "0.5rem" }}
+                  onClick={() => {
+                    if (onTrackClick) onTrackClick(listing.id);
+                    navigateTo("listings");
+                  }}
                 >
                   View
+                </button>
+                <button
+                  className="btn-delete"
+                  style={{ fontSize: "0.8rem", padding: "0.3rem 0.7rem" }}
+                  onClick={() => handleDelete(listing.id)}
+                  aria-label={`Delete ${listing.title}`}
+                >
+                  🗑 Delete
                 </button>
               </div>
             </div>
@@ -195,7 +226,23 @@ function MetricsPanel({ myListings }) {
     );
   }
 
-  const maxClicks = Math.max(...myListings.map((l) => l.clicks || 0), 1);
+  // Build 14-day click history for each listing
+  const today = new Date();
+  const labels = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    labels.push(`${d.getMonth() + 1}/${d.getDate()}`);
+  }
+
+  const maxDayClicks = Math.max(
+    ...myListings.flatMap((l) =>
+      (l.clickHistory || []).slice(-14).map((h) => h.count)
+    ),
+    1
+  );
+
+  const listingColors = ["#9d2235", "#3498db", "#27ae60", "#f39c12", "#8e44ad", "#e74c3c"];
 
   return (
     <div className="dash-panel">
@@ -204,30 +251,37 @@ function MetricsPanel({ myListings }) {
         <span className="metric-total">{totalClicks} total views</span>
       </div>
 
-      <div className="metrics-summary">
-        {myListings.map((listing) => {
-          const clicks = listing.clicks || 0;
-          const pct = Math.round((clicks / maxClicks) * 100);
-          const barColor =
-            pct >= 75
-              ? "#27ae60"
-              : pct >= 40
-              ? "#f39c12"
-              : "#e74c3c";
+      {/* 14-day click graph per listing */}
+      <div className="click-graph-section">
+        {myListings.map((listing, idx) => {
+          const history = (listing.clickHistory || []).slice(-14);
+          const color = listingColors[idx % listingColors.length];
+          const barWidthPct = maxDayClicks > 0 ? `${(history.reduce((s, h) => s + h.count, 0) / (maxDayClicks * 14)) * 100}` : "0%";
 
           return (
-            <div key={listing.id} className="metric-row">
-              <div className="metric-row-header">
-                <span className="metric-title">{listing.title}</span>
-                <span className="metric-value">
-                  {clicks} click{clicks !== 1 ? "s" : ""}
+            <div key={listing.id} className="click-graph-row">
+              <div className="click-graph-label">
+                <span className="click-graph-title">
+                  {listing.title.length > 20 ? listing.title.slice(0, 18) + "…" : listing.title}
                 </span>
+                <span className="click-graph-total">{listing.clicks || 0} total</span>
               </div>
-              <div className="metric-bar-bg">
-                <div
-                  className="metric-bar-fill"
-                  style={{ width: `${pct}%`, background: barColor }}
-                />
+              <div className="click-graph-bar-wrap">
+                <div className="click-graph-bar" style={{ width: barWidthPct, background: color }} />
+              </div>
+              <div className="click-graph-days">
+                {history.map((h, i) => (
+                  <div key={i} className="click-day-bar" title={`${h.date}: ${h.count} clicks`}>
+                    <div
+                      className="click-day-fill"
+                      style={{
+                        height: `${Math.max(h.count / maxDayClicks * 100, 4)}%`,
+                        background: color,
+                      }}
+                    />
+                    <span className="click-day-label">{labels[i]}</span>
+                  </div>
+                ))}
               </div>
             </div>
           );
@@ -242,7 +296,7 @@ function MetricsPanel({ myListings }) {
               .sort((a, b) => (b.clicks || 0) - (a.clicks || 0))
               .map((l, i) => (
                 <li key={l.id}>
-                  <strong>#{i + 1}</strong> &mdash; "{l.title}" ({l.clicks} clicks)
+                  <strong>#{i + 1}</strong> &mdash; &ldquo;{l.title}&rdquo; ({l.clicks} clicks)
                 </li>
               ))}
           </ul>
@@ -281,15 +335,8 @@ function UpdatesPanel({ allListings, preferences, myListings, onTrackClick, onSe
   recommended.sort((a, b) => (b.clicks || 0) - (a.clicks || 0));
   recommended = recommended.slice(0, 6);
 
-function handleCardClick(listing) {
+  function handleCardClick(listing) {
     onTrackClick(listing.id);
-    if (listing.placement === "onCampus" && listing.url) {
-      window.open(listing.url, "_blank", "noopener,noreferrer");
-    } else if (!currentUser) {
-      navigateTo("auth");
-    } else {
-      onSelectListing(listing);
-    }
   }
 
   return (
@@ -338,10 +385,23 @@ function handleCardClick(listing) {
                   &bull; ${(listing.price || 0).toLocaleString()} &bull; {listing.distance}{" "}
                   mi
                 </p>
+                <p className="card-author">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                  Posted by {listing.ownerName
+                    ? listing.ownerName
+                    : (listing.ownerEmail || "").split("@")[0].replace(/[._]/g, " ") || "N/A"}
+                </p>
               </div>
               <div className="dash-update-footer">
                 <span className="dash-update-clicks">
-                  👁 {listing.clicks || 0}
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  {listing.clicks || 0}
                 </span>
                 <span className="dash-update-new">NEW</span>
               </div>
@@ -398,7 +458,7 @@ export default function HomePage({
             </h2>
             <p className="hero-text">
               {currentUser
-                ? "Find housing, post listings, and connect with roommates — all in one place."
+                ? "Find housing, post listings, and connect with others — all in one place."
                 : "Find, post, and manage student housing near San Diego State University — all in one place."}
             </p>
           </div>
@@ -429,12 +489,6 @@ export default function HomePage({
                     onClick={() => navigateTo("listings")}
                   >
                     Browse Listings
-                  </button>
-                  <button
-                    className="btn-red"
-                    onClick={() => navigateTo("roommates")}
-                  >
-                    View Roommates
                   </button>
                 </div>
               </div>
@@ -474,6 +528,8 @@ export default function HomePage({
             <MyListingsPanel
               myListings={myListings}
               canCreateListing={canCreateListing}
+              onTrackClick={onTrackClick}
+              onDeleteListing={handleDeleteListing}
               navigateTo={navigateTo}
             />
             <MetricsPanel myListings={myListings} />
@@ -494,6 +550,7 @@ export default function HomePage({
         <ContactListerPopup
           listing={selectedListing}
           onClose={closeListingModal}
+          onTrackClick={onTrackClick}
         />
       )}
     </>

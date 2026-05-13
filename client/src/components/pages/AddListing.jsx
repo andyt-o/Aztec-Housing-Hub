@@ -506,7 +506,7 @@ export default function AddListing({ currentUser, onAddListing }) {
                 </label>
               </div>
 
-              <label>
+              <label className="zipcode-full-width">
                 Zipcode
                 <input
                   type="text"
