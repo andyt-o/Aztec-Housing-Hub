@@ -30,7 +30,7 @@ PORT = int(os.getenv("PORT", 5000))
 DATA_DIR = Path(__file__).parent / "data"
 RED_ID_PATTERN = re.compile(r"^\d{9}$")
 MAX_BODY_BYTES = 64 * 1024
-DEFAULT_ALLOWED_ORIGINS = {"http://localhost:5173", "http://127.0.0.1:5173"}
+DEFAULT_ALLOWED_ORIGINS = {"http://localhost:5173", "http://127.0.0.1:5173", "https://aztec-housing-2eafkx32d-andythai2004-9922s-projects.vercel.app"}
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
