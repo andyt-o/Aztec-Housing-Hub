@@ -332,8 +332,14 @@
       "type": "Apartment",
       "placement": "offCampus",
       "ownerEmail": "asd@sdsu.edu",
-      "clicks": 10,
-      "url": "#"
+      "clicks": 13,
+      "url": "#",
+      "clickHistory": [
+        {
+          "date": "2026-05-13",
+          "count": 3
+        }
+      ]
     },
     {
       "id": 5137000541,
@@ -348,8 +354,37 @@
       "type": "Apartment",
       "placement": "offCampus",
       "ownerEmail": "asd@sdsu.edu",
-      "clicks": 1,
-      "url": "#"
+      "clicks": 2,
+      "url": "#",
+      "clickHistory": [
+        {
+          "date": "2026-05-13",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": 3231287459,
+      "title": "CRACK",
+      "area": "La Mesa",
+      "price": 10000,
+      "beds": 1,
+      "baths": 1,
+      "distance": 26.0,
+      "availability": "2026-05-12",
+      "description": "COOL",
+      "type": "Apartment",
+      "placement": "offCampus",
+      "ownerEmail": "a@sdsu.edu",
+      "roommateStatus": "lookingToRoom",
+      "clicks": 9,
+      "url": "#",
+      "clickHistory": [
+        {
+          "date": "2026-05-13",
+          "count": 9
+        }
+      ]
     }
   ]
 }

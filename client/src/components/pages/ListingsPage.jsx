@@ -161,17 +161,17 @@ export default function ListingsPage({
 
           <div className="filter-group">
             <label>Bedrooms</label>
-            <div className="filter-chips">
+            <select
+              className="filter-select"
+              value={beds}
+              onChange={(e) => setBeds(e.target.value)}
+            >
               {bedOptions.map((bed) => (
-                <button
-                  key={bed}
-                  className={`filter-chip-btn${beds === bed ? " active" : ""}`}
-                  onClick={() => setBeds(bed)}
-                >
+                <option key={bed} value={bed}>
                   {bed === "Any" ? "Any" : `${bed} Bed`}
-                </button>
+                </option>
               ))}
-            </div>
+            </select>
           </div>
         </div>
 
@@ -260,13 +260,6 @@ export default function ListingsPage({
                 <p className="card-meta">{listing.area}</p>
                 <p className="card-meta">
                   {listing.beds} Bed / {listing.baths} Bath
-                </p>
-                <p className="card-author">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                    <circle cx="12" cy="7" r="4" />
-                  </svg>
-                  Posted by {(listing.ownerName || listing.ownerEmail || "").split("@")[0].replace(/[._]/g, " ") || "N/A"}
                 </p>
                 <div className="card-footer-row">
                   <span className="card-clicks">
@@ -379,9 +372,9 @@ export default function ListingsPage({
                   </p>
                   <p className="card-description">{listing.description}</p>
                   {listing.roommateStatus && listing.roommateStatus !== "" && (
-                    <span className="roommate-status-badge">
+                    <p className="card-meta" style={{ fontWeight: 600, color: "var(--accent)" }}>
                       {roommateStatusLabel[listing.roommateStatus] || listing.roommateStatus}
-                    </span>
+                    </p>
                   )}
                   <div className="card-footer-row">
                     <span className="card-clicks">
@@ -438,9 +431,9 @@ export default function ListingsPage({
                   {listing.beds} Bed / {listing.baths} Bath
                 </p>
                 {listing.roommateStatus && listing.roommateStatus !== "" && (
-                    <span className="roommate-status-badge">
+                    <p className="card-meta" style={{ fontWeight: 600, color: "var(--accent)" }}>
                       {roommateStatusLabel[listing.roommateStatus] || listing.roommateStatus}
-                    </span>
+                    </p>
                   )}
                   <div className="card-footer-row">
                     <span className="card-clicks">

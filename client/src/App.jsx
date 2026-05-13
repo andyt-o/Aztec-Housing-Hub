@@ -586,6 +586,7 @@ export default function App() {
             preferences={preferences}
             allListings={allListings}
             onTrackClick={handleTrackClick}
+            onDeleteListing={handleDeleteListing}
             navigateTo={navigateTo}
           />
         );

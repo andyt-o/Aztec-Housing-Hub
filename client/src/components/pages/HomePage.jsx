@@ -226,15 +226,6 @@ function MetricsPanel({ myListings }) {
     );
   }
 
-  // Build 14-day click history for each listing
-  const today = new Date();
-  const labels = [];
-  for (let i = 13; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    labels.push(`${d.getMonth() + 1}/${d.getDate()}`);
-  }
-
   const maxDayClicks = Math.max(
     ...myListings.flatMap((l) =>
       (l.clickHistory || []).slice(-14).map((h) => h.count)
@@ -256,32 +247,47 @@ function MetricsPanel({ myListings }) {
         {myListings.map((listing, idx) => {
           const history = (listing.clickHistory || []).slice(-14);
           const color = listingColors[idx % listingColors.length];
-          const barWidthPct = maxDayClicks > 0 ? `${(history.reduce((s, h) => s + h.count, 0) / (maxDayClicks * 14)) * 100}` : "0%";
+          const hasData = history.some(h => h.count > 0);
 
           return (
             <div key={listing.id} className="click-graph-row">
               <div className="click-graph-label">
                 <span className="click-graph-title">
-                  {listing.title.length > 20 ? listing.title.slice(0, 18) + "…" : listing.title}
+                  {listing.title.length > 30 ? listing.title.slice(0, 28) + "…" : listing.title}
                 </span>
-                <span className="click-graph-total">{listing.clicks || 0} total</span>
+                <span className="click-graph-total">{listing.clicks || 0} views</span>
               </div>
-              <div className="click-graph-bar-wrap">
-                <div className="click-graph-bar" style={{ width: barWidthPct, background: color }} />
-              </div>
-              <div className="click-graph-days">
-                {history.map((h, i) => (
-                  <div key={i} className="click-day-bar" title={`${h.date}: ${h.count} clicks`}>
-                    <div
-                      className="click-day-fill"
-                      style={{
-                        height: `${Math.max(h.count / maxDayClicks * 100, 4)}%`,
-                        background: color,
-                      }}
-                    />
-                    <span className="click-day-label">{labels[i]}</span>
-                  </div>
-                ))}
+              <div className="click-graph-container" style={{ position: 'relative', paddingLeft: '24px', paddingBottom: '20px', marginTop: '0.5rem' }}>
+                <div className="y-axis-label" style={{ position: 'absolute', left: 0, top: 0, bottom: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', fontSize: '0.6rem', color: 'var(--muted)' }}>
+                   <span>{hasData ? maxDayClicks : 1}</span>
+                   <span>0</span>
+                </div>
+                <div className="x-axis-line" style={{ position: 'absolute', bottom: '20px', left: '24px', right: 0, height: '1px', background: 'var(--border)' }}></div>
+                <div className="y-axis-line" style={{ position: 'absolute', top: 0, bottom: '20px', left: '24px', width: '1px', background: 'var(--border)' }}></div>
+                <div className="click-graph-days" style={{ height: '80px', display: 'flex', alignItems: 'flex-end', gap: '4px', paddingLeft: '4px', justifyContent: 'flex-start' }}>
+                  {history.map((h, i) => {
+                    const [year, month, day] = h.date.split("-");
+                    const label = `${parseInt(month)}/${parseInt(day)}`;
+                    return (
+                      <div key={i} className="click-day-bar" title={`${h.date}: ${h.count} views`} style={{ width: '28px', flex: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', position: 'relative' }}>
+                        <div
+                          className="click-day-fill"
+                          style={{
+                            height: hasData ? `${Math.max((h.count / maxDayClicks) * 100, 4)}%` : '4%',
+                            background: hasData ? color : 'var(--border)',
+                            width: '100%',
+                            minWidth: '12px',
+                            borderRadius: '2px 2px 0 0',
+                            transition: 'height 0.4s ease'
+                          }}
+                        />
+                        <span className="click-day-label" style={{ position: 'absolute', top: '100%', marginTop: '4px', fontSize: '0.6rem', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="x-axis-title" style={{ position: 'absolute', bottom: '-4px', left: 0, right: 0, textAlign: 'center', fontSize: '0.6rem', color: 'var(--muted)', fontWeight: 600 }}>Date</div>
+                <div className="y-axis-title" style={{ position: 'absolute', left: '-20px', top: '50%', transform: 'translateY(-50%) rotate(-90deg)', fontSize: '0.6rem', color: 'var(--muted)', fontWeight: 600, transformOrigin: 'center' }}>Views</div>
               </div>
             </div>
           );
@@ -290,18 +296,56 @@ function MetricsPanel({ myListings }) {
 
       <div className="metrics-insights">
         <h4>Quick Insights</h4>
-        {totalClicks > 0 ? (
-          <ul>
-            {myListings
-              .sort((a, b) => (b.clicks || 0) - (a.clicks || 0))
-              .map((l, i) => (
-                <li key={l.id}>
-                  <strong>#{i + 1}</strong> &mdash; &ldquo;{l.title}&rdquo; ({l.clicks} clicks)
-                </li>
-              ))}
-          </ul>
-        ) : (
-          <p>No clicks yet. Share your listing links to drive traffic!</p>
+        <div className="insights-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+          <div>
+            <p style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--muted)' }}>Top Listings</p>
+            {totalClicks > 0 ? (
+              <ul style={{ padding: 0, listStyle: 'none', margin: 0 }}>
+                {myListings
+                  .sort((a, b) => (b.clicks || 0) - (a.clicks || 0))
+                  .slice(0, 3)
+                  .map((l, i) => (
+                    <li key={l.id} style={{ fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                      <strong>#{i + 1}</strong> &mdash; {l.title.length > 20 ? l.title.slice(0, 18) + "…" : l.title} ({l.clicks} views)
+                    </li>
+                  ))}
+              </ul>
+            ) : (
+              <p style={{ fontSize: '0.85rem', opacity: 0.7 }}>No views yet.</p>
+            )}
+          </div>
+          <div>
+            <p style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--muted)' }}>Daily Activity Recap</p>
+            <ul style={{ padding: 0, listStyle: 'none', margin: 0 }}>
+              {(() => {
+                // Aggregate daily totals across all listings for the last 7 days
+                const dailyData = {};
+                myListings.forEach(l => {
+                  (l.clickHistory || []).slice(-7).forEach(h => {
+                    dailyData[h.date] = (dailyData[h.date] || 0) + h.count;
+                  });
+                });
+                
+                const last7Days = Object.entries(dailyData)
+                  .sort((a, b) => b[0].localeCompare(a[0]))
+                  .slice(0, 3);
+
+                if (last7Days.length === 0) return <li style={{ fontSize: '0.85rem', opacity: 0.7 }}>No recent activity.</li>;
+
+                return last7Days.map(([date, count]) => {
+                  const [y, m, d] = date.split("-");
+                  return (
+                    <li key={date} style={{ fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                      <strong>{parseInt(m)}/{parseInt(d)}</strong> &mdash; {count} total {count === 1 ? 'view' : 'views'}
+                    </li>
+                  );
+                });
+              })()}
+            </ul>
+          </div>
+        </div>
+        {totalClicks === 0 && (
+          <p style={{ marginTop: '1rem', fontSize: '0.85rem', fontStyle: 'italic' }}>Share your listing links to drive traffic!</p>
         )}
       </div>
     </div>
@@ -365,7 +409,7 @@ function UpdatesPanel({ allListings, preferences, myListings, onTrackClick, onSe
           {recommended.map((listing) => (
             <div
               key={listing.id}
-              className="dash-update-card"
+              className={`dash-update-card ${listing.placement}`}
               onClick={() => handleCardClick(listing)}
               role="button"
               tabIndex={0}
@@ -382,18 +426,19 @@ function UpdatesPanel({ allListings, preferences, myListings, onTrackClick, onSe
                 <h4>{listing.title}</h4>
                 <p className="dash-update-meta">
                   {listing.area} &bull; {listing.beds}bd/{listing.baths}ba
-                  &bull; ${(listing.price || 0).toLocaleString()} &bull; {listing.distance}{" "}
-                  mi
+                  &bull; ${(listing.price || 0).toLocaleString()} {listing.distance != null && `\u2022 ${listing.distance} mi`}
                 </p>
-                <p className="card-author">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                    <circle cx="12" cy="7" r="4" />
-                  </svg>
-                  Posted by {listing.ownerName
-                    ? listing.ownerName
-                    : (listing.ownerEmail || "").split("@")[0].replace(/[._]/g, " ") || "N/A"}
-                </p>
+                {listing.placement !== "onCampus" && (
+                  <p className="card-author">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                    Posted by {listing.ownerName
+                      ? listing.ownerName
+                      : (listing.ownerEmail || "").split("@")[0].replace(/[._]/g, " ") || "N/A"}
+                  </p>
+                )}
               </div>
               <div className="dash-update-footer">
                 <span className="dash-update-clicks">
@@ -433,6 +478,7 @@ export default function HomePage({
   preferences,
   allListings,
   onTrackClick,
+  onDeleteListing,
   onSelectListing,
   navigateTo,
 }) {
@@ -529,7 +575,7 @@ export default function HomePage({
               myListings={myListings}
               canCreateListing={canCreateListing}
               onTrackClick={onTrackClick}
-              onDeleteListing={handleDeleteListing}
+              onDeleteListing={onDeleteListing}
               navigateTo={navigateTo}
             />
             <MetricsPanel myListings={myListings} />

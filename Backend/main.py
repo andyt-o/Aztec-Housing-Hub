@@ -22,7 +22,7 @@ from better_profanity import profanity
 HOST = "127.0.0.1"
 PORT = 5000
 DATA_DIR = Path(__file__).parent / "data"
-DATA_FILE = Path(__file__).with_name("users.json")
+DATA_FILE = DATA_DIR / "users.json"
 RED_ID_PATTERN = re.compile(r"^\d{9}$")
 MAX_BODY_BYTES = 64 * 1024
 USERS_LOCK = threading.RLock()

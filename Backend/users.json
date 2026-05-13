@@ -1,0 +1,17 @@
+[
+  {
+    "firstName": "a",
+    "lastName": "a",
+    "redId": "123131231",
+    "email": "a@sdsu.edu",
+    "password": {
+      "salt": "7VSWw7nnXN7ND1YnnVJ1fQ==",
+      "hash": "hqDn8IAy8k1zm2l89unX4Lob69TmSts88HmGjk82xWo="
+    },
+    "cleanliness": "Moderately clean",
+    "sleepSchedule": "Night owl",
+    "bio": "swag",
+    "hobbies": "",
+    "roommateStatus": "lookingToRoom"
+  }
+]

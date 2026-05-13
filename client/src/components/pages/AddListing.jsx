@@ -389,6 +389,23 @@ export default function AddListing({ currentUser, onAddListing }) {
               )}
             </label>
 
+            <div className="roommate-status-section" style={{ marginBottom: "1rem" }}>
+              <label>
+                Roommate Status
+                <select
+                  value={form.roommateStatus}
+                  onChange={(e) => updateField("roommateStatus", e.target.value)}
+                  disabled={isSubmitting}
+                >
+                  {roommateStatusOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
             <div className="add-listing-grid">
               <label>
                 Monthly Rent ($)
@@ -473,8 +490,8 @@ export default function AddListing({ currentUser, onAddListing }) {
               </label>
             </div>
 
-            <div className="add-listing-bottom-row">
-              <label>
+            <div className="add-listing-desc-zip-row">
+              <label className="desc-field">
                 Description
                 <textarea
                   rows="3"
@@ -489,24 +506,7 @@ export default function AddListing({ currentUser, onAddListing }) {
                 )}
               </label>
 
-              <div className="roommate-status-section">
-                <label>
-                  Roommate Status
-                  <select
-                    value={form.roommateStatus}
-                    onChange={(e) => updateField("roommateStatus", e.target.value)}
-                    disabled={isSubmitting}
-                  >
-                    {roommateStatusOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              <label className="zipcode-full-width">
+              <label className="zipcode-field">
                 Zipcode
                 <input
                   type="text"

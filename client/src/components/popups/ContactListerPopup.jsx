@@ -171,23 +171,47 @@ export default function ContactListerPopup({
             </div>
           )}
 
-          {/* Poster Bio */}
-          {listing.posterBio && (
+          {/* Poster Bio & Roommate Preferences */}
+          {listing.roommateStatus && listing.roommateStatus !== "notLooking" && (
+            <>
+              {(listing.posterBio || listing.posterHobbies || listing.posterCleanliness || listing.posterSleepSchedule) && (
+                <div className="detail-section">
+                  <h4 className="detail-section-title">Living with {displayName.split(' ')[0]}</h4>
+                  <div className="poster-profile-details" style={{ fontSize: '0.9rem', lineHeight: 1.5 }}>
+                    {listing.posterBio && (
+                      <p style={{ marginBottom: '0.75rem' }}>{listing.posterBio}</p>
+                    )}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.5rem' }}>
+                      {listing.posterCleanliness && (
+                        <div>
+                          <strong style={{ display: 'block', fontSize: '0.75rem', color: 'var(--muted)', textTransform: 'uppercase' }}>Cleanliness</strong>
+                          <span>{listing.posterCleanliness}</span>
+                        </div>
+                      )}
+                      {listing.posterSleepSchedule && (
+                        <div>
+                          <strong style={{ display: 'block', fontSize: '0.75rem', color: 'var(--muted)', textTransform: 'uppercase' }}>Sleep Schedule</strong>
+                          <span>{listing.posterSleepSchedule}</span>
+                        </div>
+                      )}
+                    </div>
+                    {listing.posterHobbies && (
+                      <div style={{ marginTop: '0.75rem' }}>
+                        <strong style={{ display: 'block', fontSize: '0.75rem', color: 'var(--muted)', textTransform: 'uppercase' }}>Hobbies & Interests</strong>
+                        <span>{listing.posterHobbies}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Fallback for listings not looking for roommates but still having a bio */}
+          {listing.roommateStatus === "notLooking" && listing.posterBio && (
             <div className="detail-section">
               <h4 className="detail-section-title">About the Host</h4>
               <p className="detail-description">{listing.posterBio}</p>
-            </div>
-          )}
-
-          {/* Roommate Preferences */}
-          {listing.posterHobbies && (
-            <div className="detail-section">
-              <h4 className="detail-section-title">Roommate Preferences</h4>
-              <p className="detail-description">
-                <strong>Status:</strong> {roommateStatusLabel}
-                <br />
-                <strong>Hobbies:</strong> {listing.posterHobbies}
-              </p>
             </div>
           )}
 

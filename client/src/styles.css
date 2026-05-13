@@ -9,6 +9,7 @@
   font-family: Arial, Helvetica, sans-serif;
   background-color: var(--bg);
   color: var(--text);
+  font-size: clamp(14px, 1.1vw, 18px);
 }
 
 * {
@@ -53,7 +54,7 @@ img {
 }
 
 .page-banner .page-banner-inner {
-  max-width: 1100px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -74,7 +75,7 @@ img {
 
 /* ── Content area (constrained) ── */
 .page-content {
-  max-width: 1100px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 1.5rem 1.5rem 2rem;
   width: 100%;
@@ -219,7 +220,7 @@ img {
 }
 
 .hero-inner {
-  max-width: 1100px;
+  max-width: 1400px;
   margin: 0 auto;
   display: grid;
   grid-template-columns: 1.4fr 1fr;
@@ -347,66 +348,93 @@ img {
 /* ── Collage (logged-in landing) ── */
 .collage-section {
   width: 100%;
-  padding: 2rem 1.5rem;
+  padding: 4rem 1.5rem;
   background: var(--bg);
 }
 
 .collage-inner {
-  max-width: 1100px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
 .collage-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-  margin-top: 1rem;
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-top: 2.5rem;
+  flex-wrap: wrap;
 }
 
 .collage-card {
   position: relative;
-  min-height: 240px;
-  border-radius: 12px;
+  flex: 1;
+  min-width: 300px;
+  max-width: 440px;
+  min-height: 280px;
+  border-radius: 16px;
   overflow: hidden;
-  cursor: default;
+  cursor: pointer;
   background: #fff;
   border: 1px solid var(--border);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+}
+
+.collage-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.collage-card-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  transition: transform 0.6s ease;
+}
+
+.collage-card:hover .collage-card-bg {
+  transform: scale(1.1);
 }
 
 .collage-card-overlay {
   position: absolute;
   inset: 0;
+  z-index: 1;
   background: linear-gradient(
     to bottom,
-    rgba(0, 0, 0, 0.15) 0%,
-    rgba(0, 0, 0, 0.55) 100%
+    rgba(0, 0, 0, 0.1) 0%,
+    rgba(0, 0, 0, 0.7) 100%
   );
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  padding: 1.25rem;
+  padding: 2rem;
   color: #fff;
 }
 
 .collage-card-step {
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: 0.8rem;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  opacity: 0.8;
-  margin-bottom: 0.25rem;
+  letter-spacing: 0.1em;
+  opacity: 0.9;
+  margin-bottom: 0.5rem;
+  background: rgba(255, 255, 255, 0.2);
+  width: fit-content;
+  padding: 2px 8px;
+  border-radius: 4px;
 }
 
 .collage-card h4 {
-  margin: 0 0 0.35rem;
-  font-size: 1.15rem;
+  margin: 0 0 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 700;
 }
 
 .collage-card p {
   margin: 0;
-  font-size: 0.85rem;
-  opacity: 0.9;
-  line-height: 1.4;
+  font-size: 1rem;
+  opacity: 0.95;
+  line-height: 1.5;
 }
 
 /* ── Dashboard section (logged-in quick links) ── */
@@ -417,7 +445,7 @@ img {
 }
 
 .dashboard-inner {
-  max-width: 1100px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -833,9 +861,10 @@ img {
 
 .click-graph-days {
   display: flex;
-  gap: 2px;
+  gap: 3px;
   align-items: flex-end;
-  height: 48px;
+  height: 80px;
+  margin-top: 0.5rem;
 }
 
 .click-day-bar {
@@ -999,7 +1028,7 @@ img {
 }
 
 .auth-hero .auth-hero-inner {
-  max-width: 1100px;
+  max-width: 1400px;
   margin: 0 auto;
   display: grid;
   grid-template-columns: 1.15fr 0.95fr;
@@ -2050,7 +2079,7 @@ img {
 }
 
 .listings-page-banner .page-banner-inner {
-  max-width: 1100px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -2122,14 +2151,15 @@ img {
 }
 
 /* ── Add listing bottom row (description + zipcode) ── */
-.add-listing-bottom-row {
+.add-listing-desc-zip-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
-  margin-top: 0.75rem;
+  grid-template-columns: 1fr 200px;
+  gap: 1.5rem;
+  margin-top: 1.25rem;
+  align-items: start;
 }
 
-.add-listing-bottom-row label {
+.add-listing-desc-zip-row label {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
@@ -2137,7 +2167,7 @@ img {
   font-weight: 600;
 }
 
-.add-listing-bottom-row label textarea {
+.add-listing-desc-zip-row label textarea {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 0.6rem 0.75rem;
@@ -2147,7 +2177,7 @@ img {
   min-height: 80px;
 }
 
-.add-listing-bottom-row label input {
+.add-listing-desc-zip-row label input {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 0.6rem 0.75rem;
@@ -2155,16 +2185,20 @@ img {
   font-family: inherit;
 }
 
-.add-listing-bottom-row label input:focus,
-.add-listing-bottom-row label textarea:focus {
+.add-listing-desc-zip-row label input:focus,
+.add-listing-desc-zip-row label textarea:focus {
   outline: 2px solid rgba(157, 34, 53, 0.3);
   border-color: var(--accent);
 }
 
-.add-listing-bottom-row .field-hint {
+.add-listing-desc-zip-row .field-hint {
   font-size: 0.8rem;
   color: #888;
   margin-top: 0.25rem;
+}
+
+.add-listing-desc-zip-row .zipcode-field {
+  position: relative;
 }
 
 /* Full-width zipcode override */
@@ -2377,13 +2411,17 @@ label.zipcode-full-width input {
   align-items: flex-start;
 }
 
-.listings-split-layout.both {
-  width: 90vw;
-  max-width: 1100px;
-  margin: 0 auto;
-  flex-wrap: nowrap;
-  gap: 1.5rem;
-  overflow-x: visible;
+.listings-split-layout.both .contact-btn {
+  font-size: 0.75rem;
+  padding: 0.4rem 0.6rem;
+}
+
+.listings-split-layout.both .listing-card h4 {
+  font-size: 1rem;
+}
+
+.listings-split-layout.both .card-meta {
+  font-size: 0.8rem;
 }
 
 .on-campus-panel,
