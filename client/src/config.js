@@ -1,0 +1,48 @@
+export const appConfig = {
+  navLinks: ["Home", "Listings", "Login / Signup", "Add Listing"],
+  filters: [
+    "Keyword search",
+    "Price range",
+    "Housing type",
+    "Beds/Baths",
+    "Neighborhood near SDSU",
+  ],
+  housingTypes: ["All", "Apartment", "Room", "House", "Sublease"],
+  priceRanges: [
+    { label: "All Prices", min: 0, max: 999999 },
+    { label: "Under $1,000", min: 0, max: 999 },
+    { label: "$1,000 - $1,500", min: 1000, max: 1500 },
+    { label: "$2,000 - $2,500", min: 2000, max: 2500 },
+    { label: "$2,500+", min: 2500, max: 999999 },
+  ],
+  bedOptions: ["Any", "1", "2", "3", "4+"],
+  roommateStatusOptions: [
+    { value: "", label: "Not set" },
+    { value: "looking", label: "Looking for roommates" },
+    { value: "lookingToRoom", label: "Looking to room with others" },
+    { value: "notLooking", label: "Not looking for roommates" },
+  ],
+  emptySignupForm: {
+    firstName: "",
+    lastName: "",
+    redId: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  },
+  emptyLoginForm: {
+    email: "",
+    password: "",
+  },
+  emptyProfileForm: {
+    bio: "",
+  },
+  emptyPreferences: {
+    lookingForHousing: true,
+    maxPrice: 2000,
+    minBeds: 1,
+    preferredTypes: ["Apartment", "Room"],
+    keywords: "",
+    housingPlacement: "both",
+  },
+};

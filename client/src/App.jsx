@@ -10,6 +10,7 @@ import AuthPage from "./components/pages/AuthPage";
 import ProfilePage from "./components/pages/ProfilePage";
 import LoadingSpinner from "./components/shared/LoadingSpinner";
 import ErrorBanner from "./components/shared/ErrorBanner";
+import { appConfig } from "./config";
 
 // Proxy prefix for Vite dev server (see vite.config.js).
 // In production, the built frontend expects API paths under /api.
@@ -23,21 +24,20 @@ export default function App() {
   // ── Data fetched from backend API ──
   const [onCampusHousing, setOnCampusHousing] = useState([]);
   const [offCampusListings, setOffCampusListings] = useState([]);
-  const [appConfig, setAppConfig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
   // ── UI state ──
   const [authMode, setAuthMode] = useState("login");
-  const [signupForm, setSignupForm] = useState({});
-  const [loginForm, setLoginForm] = useState({});
+  const [signupForm, setSignupForm] = useState(appConfig.emptySignupForm);
+  const [loginForm, setLoginForm] = useState(appConfig.emptyLoginForm);
   const [signupErrors, setSignupErrors] = useState({});
   const [loginErrors, setLoginErrors] = useState({});
   const [globalMessage, setGlobalMessage] = useState({ type: "", text: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
-  const [profileForm, setProfileForm] = useState({});
+  const [profileForm, setProfileForm] = useState(appConfig.emptyProfileForm);
   const [profileSaveMessage, setProfileSaveMessage] = useState("");
   const [currentPage, setCurrentPage] = useState("home");
 
@@ -67,25 +67,15 @@ export default function App() {
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        const [listingsRes, configRes] = await Promise.all([
-          fetch(buildUrl("/listings")),
-          fetch(buildUrl("/config")),
-        ]);
+        const listingsRes = await fetch(buildUrl("/listings"));
 
         if (!listingsRes.ok)
           throw new Error(`Failed to load listings (${listingsRes.status})`);
-        if (!configRes.ok)
-          throw new Error(`Failed to load config (${configRes.status})`);
 
         const listings = await listingsRes.json();
-        const config = await configRes.json();
 
         setOnCampusHousing(listings.onCampus || []);
         setOffCampusListings(listings.offCampus || []);
-        setAppConfig(config || {});
-        setSignupForm(config.emptySignupForm || {});
-        setLoginForm(config.emptyLoginForm || {});
-        setProfileForm(config.emptyProfileForm || {});
       } catch (err) {
         setLoadError(err.message);
       } finally {
@@ -96,16 +86,14 @@ export default function App() {
     fetchAll();
   }, []);
 
-  // ── Derived config values (safe fallbacks while loading) ──
-  const navLinks = appConfig?.navLinks || [];
-  const filters = appConfig?.filters || [];
-  const housingTypes = appConfig?.housingTypes || [];
-  const priceRanges = appConfig?.priceRanges || [];
-  const bedOptions = appConfig?.bedOptions || [];
-  const emptyPreferences = appConfig?.emptyPreferences || {};
+  // ── Derived config values ──
+  const navLinks = appConfig.navLinks;
+  const housingTypes = appConfig.housingTypes;
+  const priceRanges = appConfig.priceRanges;
+  const bedOptions = appConfig.bedOptions;
 
   // ── Preferences & user listings ──
-  const [preferences, setPreferences] = useState(emptyPreferences);
+  const [preferences, setPreferences] = useState(appConfig.emptyPreferences);
 
   const allListings = [
     ...(onCampusHousing || []).map((l) => ({ ...l, placement: "onCampus" })),
@@ -551,17 +539,16 @@ export default function App() {
     }
   }
 
-  // ── Guard: server unreachable ──
-  if (loading) {
-    return <LoadingSpinner />;
-  }
-
-  if (loadError) {
-    return <ErrorBanner message={loadError} apiBaseUrl="/api" />;
-  }
-
   // ── Page router ──
   function renderPage() {
+    if (loading) {
+      return <LoadingSpinner />;
+    }
+
+    if (loadError) {
+      return <ErrorBanner message={loadError} apiBaseUrl={apiBaseUrl} />;
+    }
+
     switch (currentPage) {
       case "home":
         return (

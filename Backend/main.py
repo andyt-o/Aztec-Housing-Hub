@@ -104,7 +104,6 @@ class DataHandler(BaseHTTPRequestHandler):
     _GET_ROUTES = {
         "/api/health": "_handle_health",
         "/api/listings": "_handle_listings",
-        "/api/config": "_handle_config",
         "/api/zipcodes": "_handle_zipcodes",
         "/api/click-history": "_handle_click_history",
     }
