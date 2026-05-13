@@ -1,55 +1,74 @@
-# Aztec-Housing-Hub
-Housing availability is a serious issue for students at San Diego State University. Limited on-campus housing, rising rent, and growing enrollment make it difficult to find affordable options. Many rely on social media or outdated listings, leading to stress, scams, or unsafe living conditions, especially for transfer and first-year students.
----
+# Aztec Housing Hub
 
-## Architecture Overview
-The application follows a simple web application architecture with three main components:
+Housing availability is a serious issue for students at San Diego State University. Limited on-campus housing, rising rent, and growing enrollment make it difficult to find affordable options. Aztec Housing Hub is a platform designed to help SDSU students find safe, affordable housing and connect with compatible roommates, avoiding the stress and scams often found on social media or outdated listing sites.
 
-**Frontend**
-- Provides the user interface for browsing housing listings and interacting with the map.
-- Allows users to filter listings and manage saved housing options.
+## Features
 
-**Backend**
-- Handles application logic, user accounts, and communication between the frontend and database.
+- **Housing Listings:** Browse, filter, and view on-campus and off-campus housing options.
+- **User Authentication:** Secure login and registration using SDSU email addresses (`@sdsu.edu`).
+- **Roommate Matching:** Create a profile with your lifestyle preferences (cleanliness, sleep schedule, hobbies) to find compatible roommates.
+- **Listing Management:** Authenticated users can create, edit, and delete their own housing listings.
+- **Profanity Filtering:** Automated server-side validation to ensure a safe and respectful community environment.
+- **Click Tracking & Analytics:** Track and display view counts for individual listings.
 
-**Database**
-- Stores user accounts, housing listings, and saved listings.
+## Architecture
 
----
+The application follows a modern web application architecture:
 
-## Setup
-Clone the repository and install dependencies.
+- **Frontend:** React (built with Vite) providing a responsive user interface for browsing listings, managing profiles, and interacting with the platform.
+- **Backend:** Python HTTP server handling API requests, business logic, authentication, and profanity filtering.
+- **Database:** PostgreSQL storing user accounts, housing listings, click history, and roommate preferences.
 
-### Frontend
-The React frontend lives in `client/` and uses Vite.
+## Prerequisites
 
-1. Open a terminal in `Aztec-Housing-Hub/client`
-2. Run `npm.cmd install`
-3. Run `npm.cmd run dev`
+- Node.js (v18+)
+- Python 3.10+
+- PostgreSQL database
 
-### Backend
-How to run the backend:
+## Setup Instructions
 
-1. Open a terminal in `Aztec-Housing-Hub/Backend`
-2. Run `python main.py`
+### 1. Database Configuration
 
-### Sprint 1 Homepage ~ 2 weeks
-The homepage currently includes:
+1. Ensure you have a running PostgreSQL instance.
+2. Create a new database for the application.
+3. In the `Backend/` directory, create a `.env` file and set your database connection string:
+   ```env
+   DATABASE_URL="postgresql://username:password@localhost:5432/aztec_housing"
+   ```
 
-- A polished SDSU-focused landing page
-- A hero section introducing Aztec Housing Hub
-- Static preview content for a future housing search experience
-- Feature and workflow sections for the initial project presentation
+### 2. Backend Setup
 
-The current version is intentionally simple and frontend-focused so the project
-has a strong first commit without adding unnecessary backend complexity.
+The Python backend manages the API and database connections.
 
-### Sprint 2 Backend + More Frontend ~ 1 week
-- Working user login/sign up.
-- Stores user data safely and securely.
-- Connected the frontend to the backend.
+1. Open a terminal and navigate to the `Backend/` directory:
+   ```bash
+   cd Backend
+   ```
+2. (Optional but recommended) Create and activate a virtual environment.
+3. Install the required Python dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. Start the backend server:
+   ```bash
+   python main.py
+   ```
+   *The server will run on `http://127.0.0.1:5000`.*
 
-### Sprint 3 Profile + Roommate Matching ~ 1 week
-- Added a Profile tab where logged-in users can enter roommate preferences such as hobbies, cleanliness, and sleep schedule.
-- Added a Roommates tab that shows potential roommate cards and compatibility scores.
-- Added roommate filters so users can find similar roommates by cleanliness, sleep schedule, hobby keyword, and a match percentage.
+### 3. Frontend Setup
+
+The React frontend lives in the `client/` directory and uses Vite.
+
+1. Open a new terminal and navigate to the `client/` directory:
+   ```bash
+   cd client
+   ```
+2. Install the Node.js dependencies:
+   ```bash
+   npm install
+   ```
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
+   *The application will be accessible at `http://localhost:5173`.*

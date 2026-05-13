@@ -10,7 +10,6 @@ import AuthPage from "./components/pages/AuthPage";
 import ProfilePage from "./components/pages/ProfilePage";
 import LoadingSpinner from "./components/shared/LoadingSpinner";
 import ErrorBanner from "./components/shared/ErrorBanner";
-import { checkProfanity } from "./utils/profanity";
 
 // Proxy prefix for Vite dev server (see vite.config.js).
 // In production, the built frontend expects API paths under /api.
@@ -18,43 +17,6 @@ const apiBaseUrl = import.meta.env.VITE_API_URL || "/api";
 
 function buildUrl(path) {
   return apiBaseUrl + path;
-}
-
-/**
- * Censor a single string via the backend profanity endpoint.
- * Falls back to the raw string if the check fails.
- */
-async function censorText(text) {
-  if (!text || typeof text !== "string" || !text.trim()) return text;
-  try {
-    const result = await checkProfanity(text);
-    return result.censored || text;
-  } catch {
-    return text;
-  }
-}
-
-/**
- * Recursively censor all string values in an object or array.
- * Skips 'id', 'email', 'password', 'hash', 'salt', 'clicks', and numeric fields.
- */
-async function deepCensor(obj) {
-  if (typeof obj === "string") return await censorText(obj);
-  if (typeof obj !== "object" || obj === null) return obj;
-  if (Array.isArray(obj)) return await Promise.all(obj.map(deepCensor));
-
-  const result = {};
-  const SKIP_KEYS = new Set(["id", "email", "clicks", "password", "salt", "hash"]);
-  for (const [key, value] of Object.entries(obj)) {
-    if (SKIP_KEYS.has(key) && typeof value === "string") {
-      result[key] = value;
-    } else if (typeof value === "string") {
-      result[key] = await censorText(value);
-    } else {
-      result[key] = await deepCensor(value);
-    }
-  }
-  return result;
 }
 
 export default function App() {
@@ -118,14 +80,8 @@ export default function App() {
         const listings = await listingsRes.json();
         const config = await configRes.json();
 
-        // Censor all user-generated text before storing in state (defensive)
-        const safeListings = {
-          onCampus: await deepCensor(listings.onCampus || []),
-          offCampus: await deepCensor(listings.offCampus || []),
-        };
-
-        setOnCampusHousing(safeListings.onCampus);
-        setOffCampusListings(safeListings.offCampus);
+        setOnCampusHousing(listings.onCampus || []);
+        setOffCampusListings(listings.offCampus || []);
         setAppConfig(config || {});
         setSignupForm(config.emptySignupForm || {});
         setLoginForm(config.emptyLoginForm || {});
@@ -164,6 +120,14 @@ export default function App() {
 
   // ── Click tracking ──
   async function handleTrackClick(listingId) {
+    // Optimistically update the local state so the UI reflects the click immediately
+    setOnCampusHousing((current) =>
+      current.map((l) => (l.id === listingId ? { ...l, clicks: (l.clicks || 0) + 1 } : l))
+    );
+    setOffCampusListings((current) =>
+      current.map((l) => (l.id === listingId ? { ...l, clicks: (l.clicks || 0) + 1 } : l))
+    );
+
     try {
       await fetch(buildUrl("/track-click"), {
         method: "POST",
@@ -194,12 +158,11 @@ export default function App() {
   }
 
   async function handleAddListing(listing) {
-    const safeListing = await deepCensor(listing);
-    safeListing.placement = "offCampus";
+    listing.placement = "offCampus";
     if (currentUser) {
-      safeListing.posterBio = currentUser.bio || "";
+      listing.posterBio = currentUser.bio || "";
     }
-    setOffCampusListings((current) => [safeListing, ...current]);
+    setOffCampusListings((current) => [listing, ...current]);
     navigateTo("listings");
   }
 
@@ -256,24 +219,13 @@ export default function App() {
   async function handleUpdateName(firstName, lastName) {
     if (!currentUser) return;
     try {
-      // Check profanity before sending to server
-      const firstCheck = await checkProfanity(firstName);
-      const lastCheck = await checkProfanity(lastName);
-      if (firstCheck.isProfane || lastCheck.isProfane) {
-        setGlobalMessage({
-          type: "error",
-          text: "Name contains inappropriate language.",
-        });
-        return;
-      }
-
       const response = await fetch(buildUrl("/update-name"), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: currentUser.email,
-          firstName: firstCheck.censored,
-          lastName: lastCheck.censored,
+          firstName: firstName,
+          lastName: lastName,
         }),
       });
       const data = await response.json();
@@ -483,15 +435,6 @@ export default function App() {
   async function handleProfileSave(event) {
     event.preventDefault();
 
-    // Check profanity on description before saving
-    if (profileForm.description?.trim()) {
-      const check = await checkProfanity(profileForm.description.trim());
-      if (check.isProfane) {
-        setProfileSaveMessage("Description contains inappropriate language and was not saved.");
-        return;
-      }
-    }
-
     // Save roommate profile to backend
     if (currentUser) {
       try {
@@ -509,7 +452,7 @@ export default function App() {
           return;
         }
 
-        const newBio = profileForm.description || "";
+        const newBio = data.user.bio || "";
         setCurrentUser((prev) => ({
           ...prev,
           bio: newBio,
@@ -551,7 +494,7 @@ export default function App() {
         throw new Error("Update failed");
       }
 
-      const updatedListing = await deepCensor(data.listing);
+      const updatedListing = data.listing;
       // Preserve local state metadata
       updatedListing.placement = "offCampus";
       if (currentUser) {

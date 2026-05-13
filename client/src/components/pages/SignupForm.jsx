@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { validateField } from "../../utils/profanity";
 
 export default function SignupForm({
   form,
@@ -9,19 +8,9 @@ export default function SignupForm({
   onSubmit,
   isSubmitting,
 }) {
-  const [profanityErrs, setProfanityErrs] = useState({});
-
   const handleChange = (field, value) => {
     setForm((c) => ({ ...c, [field]: value }));
-    // Clear profanity error when user types
-    if (profanityErrs[field]) {
-      setProfanityErrs((c) => {
-        const next = { ...c };
-        delete next[field];
-        return next;
-      });
-    }
-    // Clear backend errors too
+    // Clear backend errors
     if (errors[field]) {
       setErrors((c) => {
         const next = { ...c };
@@ -31,27 +20,8 @@ export default function SignupForm({
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    setProfanityErrs({});
-
-    // Frontend profanity checks on name fields only
-    // Email profanity check removed (SDSU email is a fixed/verified credential)
-    const newErrs = {};
-    if (form.firstName?.trim()) {
-      const result = await validateField(form.firstName, "First name");
-      if (result) newErrs.firstName = result;
-    }
-    if (form.lastName?.trim()) {
-      const result = await validateField(form.lastName, "Last name");
-      if (result) newErrs.lastName = result;
-    }
-
-    if (Object.keys(newErrs).length > 0) {
-      setProfanityErrs(newErrs);
-      return;
-    }
-
     onSubmit(e);
   };
 
@@ -66,14 +36,14 @@ export default function SignupForm({
             onChange={(e) => handleChange("firstName", e.target.value)}
             placeholder="First name"
             className={
-              errors.firstName || profanityErrs.firstName
+              errors.firstName
                 ? "field-error-input"
                 : ""
             }
           />
-          {(errors.firstName || profanityErrs.firstName) && (
+          {errors.firstName && (
             <small className="field-error">
-              {profanityErrs.firstName || errors.firstName}
+              {errors.firstName}
             </small>
           )}
         </label>
@@ -85,14 +55,14 @@ export default function SignupForm({
             onChange={(e) => handleChange("lastName", e.target.value)}
             placeholder="Last name"
             className={
-              errors.lastName || profanityErrs.lastName
+              errors.lastName
                 ? "field-error-input"
                 : ""
             }
           />
-          {(errors.lastName || profanityErrs.lastName) && (
+          {errors.lastName && (
             <small className="field-error">
-              {profanityErrs.lastName || errors.lastName}
+              {errors.lastName}
             </small>
           )}
         </label>

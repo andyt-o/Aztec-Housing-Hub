@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { checkProfanity, hasProfanity, censor, validateField } from "../../utils/profanity";
 
 const apiBaseUrl = "/api";
 
@@ -259,9 +258,6 @@ export default function AddListing({ currentUser, onAddListing }) {
     const errs = {};
     if (!form.title.trim()) {
       errs.title = "Title is required.";
-    } else {
-      const titleCheck = await checkProfanity(form.title.trim());
-      if (titleCheck.isProfane) errs.title = "Title contains inappropriate language.";
     }
     if (!form.price) {
       errs.price = "Price is required.";
@@ -290,10 +286,6 @@ export default function AddListing({ currentUser, onAddListing }) {
       errs.zipcode = "Zipcode is required.";
     } else if (!zipcodes.some((z) => z.zip === form.zipcode.trim())) {
       errs.zipcode = "Please enter a valid zipcode from the list.";
-    }
-    if (form.description.trim()) {
-      const descCheck = await checkProfanity(form.description.trim());
-      if (descCheck.isProfane) errs.description = "Description contains inappropriate language.";
     }
 
     if (Object.keys(errs).length > 0) {

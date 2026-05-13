@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { checkProfanity } from "../../utils/profanity";
 
 export default function EditListingPopup({ listing, onClose, onUpdate }) {
   const [form, setForm] = useState({
@@ -29,25 +28,13 @@ export default function EditListingPopup({ listing, onClose, onUpdate }) {
 
     setIsSubmitting(true);
     try {
-      // Check profanity
-      const titleCheck = await checkProfanity(form.title);
-      const descCheck = await checkProfanity(form.description || "");
-
-      if (titleCheck.isProfane || descCheck.isProfane) {
-        setErrors({ general: "Inappropriate language detected." });
-        setIsSubmitting(false);
-        return;
-      }
-
       await onUpdate(listing.id, {
         ...form,
         price: Number(form.price),
-        title: titleCheck.censored,
-        description: descCheck.censored,
       });
       onClose();
     } catch (err) {
-      setErrors({ general: "An error occurred while saving." });
+      setErrors({ general: err.message || "An error occurred while saving." });
     } finally {
       setIsSubmitting(false);
     }

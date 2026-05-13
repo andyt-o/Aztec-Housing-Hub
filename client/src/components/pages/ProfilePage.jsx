@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { checkProfanity } from "../../utils/profanity";
 
 const housingTypes = ["All", "Apartment", "Room", "House", "Sublease"];
 
@@ -21,15 +20,8 @@ export default function ProfilePage({
     if (keywordError) setKeywordError("");
   };
 
-  const handleKeywordsBlur = async (value) => {
-    if (!value?.trim()) {
-      setKeywordError("");
-      return;
-    }
-    const result = await checkProfanity(value.trim());
-    if (result.isProfane) {
-      setKeywordError("Keywords contain inappropriate language.");
-    }
+  const handleKeywordsBlur = (value) => {
+    // Redundant profanity check removed, backend handles it on save
   };
 
   const handleDescriptionChange = (value) => {
@@ -37,15 +29,8 @@ export default function ProfilePage({
     if (descError) setDescError("");
   };
 
-  const handleDescriptionBlur = async (value) => {
-    if (!value?.trim()) {
-      setDescError("");
-      return;
-    }
-    const result = await checkProfanity(value.trim());
-    if (result.isProfane) {
-      setDescError("Description contains inappropriate language.");
-    }
+  const handleDescriptionBlur = (value) => {
+    // Redundant profanity check removed, backend handles it on save
   };
 
   return (

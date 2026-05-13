@@ -609,8 +609,11 @@ class DataHandler(BaseHTTPRequestHandler):
         params = []
         
         if "bio" in payload:
-            updates.append("bio = %s")
             val = str(payload.get("bio", "")).strip()
+            if contains_vulgarity(val):
+                self.respond(400, {"message": "Bio contains inappropriate language."})
+                return
+            updates.append("bio = %s")
             params.append(censor_text(val) if val else "")
             updated = True
             
@@ -687,11 +690,19 @@ class DataHandler(BaseHTTPRequestHandler):
             updates.append("price = %s")
             params.append(clamp_price(payload["price"]))
         if "description" in payload:
+            desc = str(payload["description"]).strip()
+            if contains_vulgarity(desc):
+                self.respond(400, {"message": "Description contains inappropriate language."})
+                return
             updates.append("description = %s")
-            params.append(censor_text(str(payload["description"]).strip()))
+            params.append(censor_text(desc))
         if "title" in payload:
+            title = str(payload["title"]).strip()
+            if contains_vulgarity(title):
+                self.respond(400, {"message": "Title contains inappropriate language."})
+                return
             updates.append("title = %s")
-            params.append(censor_text(str(payload["title"]).strip()))
+            params.append(censor_text(title))
         if "roommateStatus" in payload:
             updates.append("roommate_status = %s")
             params.append(str(payload["roommateStatus"]).strip())
