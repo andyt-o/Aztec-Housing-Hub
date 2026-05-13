@@ -14,7 +14,7 @@ import { checkProfanity } from "./utils/profanity";
 
 // Proxy prefix for Vite dev server (see vite.config.js).
 // In production, the built frontend expects API paths under /api.
-const apiBaseUrl = "/api";
+const apiBaseUrl = import.meta.env.VITE_API_URL || "/api";
 
 function buildUrl(path) {
   return apiBaseUrl + path;
@@ -143,8 +143,6 @@ export default function App() {
   // ── Derived config values (safe fallbacks while loading) ──
   const navLinks = appConfig?.navLinks || [];
   const filters = appConfig?.filters || [];
-  const cleanlinessOptions = appConfig?.cleanlinessOptions || [];
-  const sleepScheduleOptions = appConfig?.sleepScheduleOptions || [];
   const housingTypes = appConfig?.housingTypes || [];
   const priceRanges = appConfig?.priceRanges || [];
   const bedOptions = appConfig?.bedOptions || [];
@@ -198,6 +196,9 @@ export default function App() {
   async function handleAddListing(listing) {
     const safeListing = await deepCensor(listing);
     safeListing.placement = "offCampus";
+    if (currentUser) {
+      safeListing.posterBio = currentUser.bio || "";
+    }
     setOffCampusListings((current) => [safeListing, ...current]);
     navigateTo("listings");
   }
@@ -482,14 +483,7 @@ export default function App() {
   async function handleProfileSave(event) {
     event.preventDefault();
 
-    // Check profanity on hobbies and description before saving
-    if (profileForm.hobbies?.trim()) {
-      const check = await checkProfanity(profileForm.hobbies.trim());
-      if (check.isProfane) {
-        setProfileSaveMessage("Hobbies contain inappropriate language and were not saved.");
-        return;
-      }
-    }
+    // Check profanity on description before saving
     if (profileForm.description?.trim()) {
       const check = await checkProfanity(profileForm.description.trim());
       if (check.isProfane) {
@@ -506,9 +500,7 @@ export default function App() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             email: currentUser.email,
-            roommateStatus: profileForm.roommateStatus || "",
             bio: profileForm.description || "",
-            hobbies: profileForm.hobbies || "",
           }),
         });
         const data = await response.json();
@@ -516,12 +508,24 @@ export default function App() {
           setProfileSaveMessage(data.message || "Failed to save profile.");
           return;
         }
+
+        const newBio = profileForm.description || "";
         setCurrentUser((prev) => ({
           ...prev,
-          roommateStatus: profileForm.roommateStatus || "",
-          bio: profileForm.description || "",
-          hobbies: profileForm.hobbies || "",
+          bio: newBio,
         }));
+
+        // Sync biography to all local listings owned by this user
+        setOffCampusListings((current) =>
+          current.map((l) =>
+            l.ownerEmail === currentUser.email ? { ...l, posterBio: newBio } : l
+          )
+        );
+        setOnCampusHousing((current) =>
+          current.map((l) =>
+            l.ownerEmail === currentUser.email ? { ...l, posterBio: newBio } : l
+          )
+        );
       } catch {
         setProfileSaveMessage("Could not reach the server. Profile not saved.");
         return;
@@ -531,10 +535,49 @@ export default function App() {
     setProfileSaveMessage("Profile saved successfully!");
   }
 
+  async function handleUpdateListing(listingId, updatedFields) {
+    try {
+      const response = await fetch(buildUrl("/update-listing"), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: listingId, ...updatedFields }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setGlobalMessage({
+          type: "error",
+          text: data.message || "Failed to update listing.",
+        });
+        throw new Error("Update failed");
+      }
+
+      const updatedListing = await deepCensor(data.listing);
+      // Preserve local state metadata
+      updatedListing.placement = "offCampus";
+      if (currentUser) {
+        updatedListing.posterBio = currentUser.bio || "";
+      }
+
+      setOffCampusListings((current) =>
+        current.map((l) => (l.id === listingId ? updatedListing : l))
+      );
+      setGlobalMessage({
+        type: "success",
+        text: "Listing updated successfully.",
+      });
+    } catch (err) {
+      setGlobalMessage({
+        type: "error",
+        text: "Could not reach the server. Listing not updated.",
+      });
+      throw err;
+    }
+  }
+
   async function handleDeleteListing(listingId) {
     try {
       const response = await fetch(buildUrl("/delete-listing"), {
-        method: "POST",
+        method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ listingId }),
       });
@@ -587,6 +630,7 @@ export default function App() {
             allListings={allListings}
             onTrackClick={handleTrackClick}
             onDeleteListing={handleDeleteListing}
+            onUpdateListing={handleUpdateListing}
             navigateTo={navigateTo}
           />
         );
@@ -656,8 +700,6 @@ export default function App() {
             onSignOut={handleSignOut}
             onUpdateName={handleUpdateName}
             saveMessage={profileSaveMessage}
-            cleanlinessOptions={cleanlinessOptions}
-            sleepScheduleOptions={sleepScheduleOptions}
             currentUser={currentUser}
           />
         );

@@ -96,19 +96,6 @@ export default function ListingsPage({
     }
   }
 
-  function handleListingClick(listing) {
-    if (onTrackClick) {
-      onTrackClick(listing.id);
-    }
-    if (listing.placement === "onCampus" && listing.url) {
-      window.open(listing.url, "_blank", "noopener,noreferrer");
-    } else if (!currentUser) {
-      navigateTo("auth");
-    } else {
-      setSelectedListing(listing);
-    }
-  }
-
   function handleContactClick(listing) {
     if (!currentUser) {
       navigateTo("auth");
@@ -244,16 +231,6 @@ export default function ListingsPage({
               <article
                 className="listing-card"
                 key={listing.id}
-                onClick={() => handleListingClick(listing)}
-                role="button"
-                tabIndex={0}
-                aria-label={`View ${listing.title}`}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    handleListingClick(listing);
-                  }
-                }}
               >
                 <div className="card-type-badge">{listing.type || "Traditional"}</div>
                 <h4>{listing.title}</h4>
@@ -276,7 +253,6 @@ export default function ListingsPage({
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => {
-                      e.stopPropagation();
                       if (onTrackClick) onTrackClick(listing.id);
                     }}
                   >
@@ -351,16 +327,6 @@ export default function ListingsPage({
                 <article
                   className="listing-card"
                   key={listing.id}
-                  onClick={() => handleListingClick(listing)}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`View ${listing.title}`}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      handleListingClick(listing);
-                    }
-                  }}
                 >
                   <div className="card-type-badge">Sublease</div>
                   <h4>{listing.title}</h4>
@@ -388,7 +354,6 @@ export default function ListingsPage({
                       className="contact-btn"
                       style={{ marginTop: "0", display: "inline-block", width: "auto", flexShrink: 0 }}
                       onClick={(e) => {
-                        e.stopPropagation();
                         handleContactClick(listing);
                       }}
                     >
@@ -411,16 +376,6 @@ export default function ListingsPage({
               <article
                 className="listing-card"
                 key={listing.id}
-                onClick={() => handleListingClick(listing)}
-                role="button"
-                tabIndex={0}
-                aria-label={`View ${listing.title}`}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    handleListingClick(listing);
-                  }
-                }}
               >
                 <div className="card-type-badge">{listing.type}</div>
                 <h4>{listing.title}</h4>
@@ -455,7 +410,6 @@ export default function ListingsPage({
                     className="contact-btn"
                     style={{ marginTop: "0.75rem", display: "inline-block", width: "100%" }}
                     onClick={(e) => {
-                      e.stopPropagation();
                       handleContactClick(listing);
                     }}
                   >
@@ -480,7 +434,7 @@ export default function ListingsPage({
         </div>
       </div>
 
-      <main className="page-content">
+      <main className="page-content listings-page-content">
         {/* ── Placement Toggle Bar ── */}
         <div className="placement-toggle-bar">
           <button

@@ -11,37 +11,10 @@ export default function ProfilePage({
   onSave,
   onSignOut,
   saveMessage,
-  cleanlinessOptions,
-  sleepScheduleOptions,
   currentUser,
 }) {
-  const [hobbyError, setHobbyError] = useState("");
   const [keywordError, setKeywordError] = useState("");
   const [descError, setDescError] = useState("");
-  const [statusError, setStatusError] = useState("");
-
-  const roommateStatusOptions = [
-    { value: "", label: "Not set" },
-    { value: "looking", label: "Looking for roommates" },
-    { value: "lookingToRoom", label: "Looking to room with others" },
-    { value: "notLooking", label: "Not looking for roommates" },
-  ];
-
-  const handleHobbiesChange = (value) => {
-    setProfileForm((c) => ({ ...c, hobbies: value }));
-    if (hobbyError) setHobbyError("");
-  };
-
-  const handleHobbiesBlur = async (value) => {
-    if (!value?.trim()) {
-      setHobbyError("");
-      return;
-    }
-    const result = await checkProfanity(value.trim());
-    if (result.isProfane) {
-      setHobbyError("Hobbies contain inappropriate language.");
-    }
-  };
 
   const handleKeywordsChange = (value) => {
     setPreferences((c) => ({ ...c, keywords: value }));
@@ -73,11 +46,6 @@ export default function ProfilePage({
     if (result.isProfane) {
       setDescError("Description contains inappropriate language.");
     }
-  };
-
-  const handleStatusChange = (value) => {
-    setProfileForm((c) => ({ ...c, roommateStatus: value }));
-    if (statusError) setStatusError("");
   };
 
   return (
@@ -257,39 +225,16 @@ export default function ProfilePage({
           </div>
         </section>
 
-        {/* Roommate Status & Description */}
+        {/* Description / About Me */}
         <section className="section-block">
           <h3 className="section-title">
-            <span className="section-icon">&#127919;</span> About You &amp; Roommate Status
+            <span className="section-icon">&#127919;</span> About You
           </h3>
           <p className="section-subtitle">
-            Tell other students about yourself and what you&rsquo;re looking for in a living situation.
+            Tell other students about yourself — hobbies, interests, lifestyle, etc.
           </p>
 
           <div className="pref-form">
-            {/* Roommate Status */}
-            <div className="pref-field-group">
-              <div className="pref-field-header">Roommate Status</div>
-              <div className="auth-field">
-                <span>What best describes your situation?</span>
-                <select
-                  value={profileForm.roommateStatus || ""}
-                  onChange={(e) => handleStatusChange(e.target.value)}
-                  className={`pref-select${statusError ? " field-error-input" : ""}`}
-                >
-                  {roommateStatusOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-                {statusError && (
-                  <small className="field-error">{statusError}</small>
-                )}
-              </div>
-            </div>
-
-            {/* Description / About Me */}
             <div className="pref-field-group">
               <div className="pref-field-header">About Me</div>
               <div className="auth-field">

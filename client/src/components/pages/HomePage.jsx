@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ContactListerPopup } from "../popups";
+import { ContactListerPopup, EditListingPopup, ConfirmDeletePopup } from "../popups";
 
 const COLLAGE_STEPS = [
   {
@@ -90,11 +90,22 @@ function Collage() {
 }
 
 /* ── Dashboard: My Listings Panel ── */
-function MyListingsPanel({ myListings, canCreateListing, onTrackClick, onDeleteListing, navigateTo }) {
-  const handleDelete = (listingId) => {
-    if (window.confirm("Are you sure you want to delete this listing?")) {
-      onDeleteListing(listingId);
+function MyListingsPanel({ myListings, canCreateListing, onTrackClick, onDeleteListing, onEditListing, navigateTo }) {
+  const [listingToDelete, setListingToDelete] = useState(null);
+
+  const requestDelete = (listing) => {
+    setListingToDelete(listing);
+  };
+
+  const confirmDelete = () => {
+    if (listingToDelete) {
+      onDeleteListing(listingToDelete.id);
+      setListingToDelete(null);
     }
+  };
+
+  const cancelDelete = () => {
+    setListingToDelete(null);
   };
 
   return (
@@ -148,17 +159,12 @@ function MyListingsPanel({ myListings, canCreateListing, onTrackClick, onDeleteL
                     </svg>
                     {listing.clicks ?? 0}
                   </span>
-                  <span className="dash-listing-author">
-                    {listing.ownerName
-                      ? listing.ownerName.split(" ")[0]
-                      : (listing.ownerEmail || "").split("@")[0].replace(/[._]/g, " ") || "N/A"}
-                  </span>
                 </div>
               </div>
-              <div className="dash-listing-actions">
+              <div className="dash-listing-actions" style={{ display: 'flex', gap: '0.4rem', marginTop: '0.75rem' }}>
                 <button
                   className="btn-view"
-                  style={{ fontSize: "0.8rem", padding: "0.3rem 0.7rem", marginRight: "0.5rem" }}
+                  style={{ fontSize: "0.8rem", padding: "0.3rem 0.7rem", flex: 1 }}
                   onClick={() => {
                     if (onTrackClick) onTrackClick(listing.id);
                     navigateTo("listings");
@@ -167,9 +173,25 @@ function MyListingsPanel({ myListings, canCreateListing, onTrackClick, onDeleteL
                   View
                 </button>
                 <button
+                  className="btn-edit"
+                  style={{ 
+                    fontSize: "0.8rem", 
+                    padding: "0.3rem 0.7rem", 
+                    flex: 1,
+                    background: "rgba(0,0,0,0.05)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    fontWeight: 600
+                  }}
+                  onClick={() => onEditListing(listing)}
+                >
+                  ✎ Edit
+                </button>
+                <button
                   className="btn-delete"
-                  style={{ fontSize: "0.8rem", padding: "0.3rem 0.7rem" }}
-                  onClick={() => handleDelete(listing.id)}
+                  style={{ fontSize: "0.8rem", padding: "0.3rem 0.7rem", flex: 1 }}
+                  onClick={() => requestDelete(listing)}
                   aria-label={`Delete ${listing.title}`}
                 >
                   🗑 Delete
@@ -204,6 +226,14 @@ function MyListingsPanel({ myListings, canCreateListing, onTrackClick, onDeleteL
         <p className="dash-cap-notice">
           You&rsquo;ve reached the maximum of 3 listings.
         </p>
+      )}
+
+      {listingToDelete && (
+        <ConfirmDeletePopup
+          title={listingToDelete.title}
+          onConfirm={confirmDelete}
+          onClose={cancelDelete}
+        />
       )}
     </div>
   );
@@ -258,7 +288,7 @@ function MetricsPanel({ myListings }) {
                 <span className="click-graph-total">{listing.clicks || 0} views</span>
               </div>
               <div className="click-graph-container" style={{ position: 'relative', paddingLeft: '24px', paddingBottom: '20px', marginTop: '0.5rem' }}>
-                <div className="y-axis-label" style={{ position: 'absolute', left: 0, top: 0, bottom: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', fontSize: '0.6rem', color: 'var(--muted)' }}>
+                <div className="y-axis-label" style={{ position: 'absolute', left: 0, top: 0, bottom: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', fontSize: '0.6rem', color: 'var(--muted)', fontWeight: 'bold' }}>
                    <span>{hasData ? maxDayClicks : 1}</span>
                    <span>0</span>
                 </div>
@@ -281,13 +311,13 @@ function MetricsPanel({ myListings }) {
                             transition: 'height 0.4s ease'
                           }}
                         />
-                        <span className="click-day-label" style={{ position: 'absolute', top: '100%', marginTop: '4px', fontSize: '0.6rem', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{label}</span>
+                        <span className="click-day-label" style={{ position: 'absolute', top: '100%', marginTop: '4px', fontSize: '0.6rem', color: 'var(--muted)', whiteSpace: 'nowrap', fontWeight: 'bold' }}>{label}</span>
                       </div>
                     );
                   })}
                 </div>
-                <div className="x-axis-title" style={{ position: 'absolute', bottom: '-4px', left: 0, right: 0, textAlign: 'center', fontSize: '0.6rem', color: 'var(--muted)', fontWeight: 600 }}>Date</div>
-                <div className="y-axis-title" style={{ position: 'absolute', left: '-20px', top: '50%', transform: 'translateY(-50%) rotate(-90deg)', fontSize: '0.6rem', color: 'var(--muted)', fontWeight: 600, transformOrigin: 'center' }}>Views</div>
+                <div className="x-axis-title" style={{ position: 'absolute', bottom: '-4px', left: 0, right: 0, textAlign: 'center', fontSize: '0.6rem', color: 'var(--muted)', fontWeight: 'bold' }}>Date</div>
+                <div className="y-axis-title" style={{ position: 'absolute', left: '-20px', top: '50%', transform: 'translateY(-50%) rotate(-90deg)', fontSize: '0.6rem', color: 'var(--muted)', fontWeight: 'bold', transformOrigin: 'center' }}>Views</div>
               </div>
             </div>
           );
@@ -380,7 +410,12 @@ function UpdatesPanel({ allListings, preferences, myListings, onTrackClick, onSe
   recommended = recommended.slice(0, 6);
 
   function handleCardClick(listing) {
-    onTrackClick(listing.id);
+    if (onTrackClick) onTrackClick(listing.id);
+    if (listing.placement === "offCampus") {
+      onSelectListing(listing);
+    } else if (listing.placement === "onCampus" && listing.url) {
+      window.open(listing.url, "_blank", "noopener,noreferrer");
+    }
   }
 
   return (
@@ -479,13 +514,19 @@ export default function HomePage({
   allListings,
   onTrackClick,
   onDeleteListing,
+  onUpdateListing,
   onSelectListing,
   navigateTo,
 }) {
   const [selectedListing, setSelectedListing] = useState(null);
+  const [editingListing, setEditingListing] = useState(null);
 
   function closeListingModal() {
     setSelectedListing(null);
+  }
+
+  function closeEditModal() {
+    setEditingListing(null);
   }
 
   return (
@@ -576,6 +617,7 @@ export default function HomePage({
               canCreateListing={canCreateListing}
               onTrackClick={onTrackClick}
               onDeleteListing={onDeleteListing}
+              onEditListing={setEditingListing}
               navigateTo={navigateTo}
             />
             <MetricsPanel myListings={myListings} />
@@ -597,6 +639,15 @@ export default function HomePage({
           listing={selectedListing}
           onClose={closeListingModal}
           onTrackClick={onTrackClick}
+        />
+      )}
+
+      {/* ── Edit Listing Popup ── */}
+      {editingListing && (
+        <EditListingPopup
+          listing={editingListing}
+          onClose={closeEditModal}
+          onUpdate={onUpdateListing}
         />
       )}
     </>

@@ -1,0 +1,21 @@
+# Dependency folders (very high token cost)
+client/dist/
+client/node_modules/
+Backend/__pycache__
+Backend/.venv
+# Version control and IDE metadata
+.git/
+.vscode/
+.idea/
+.gitignore
+
+# Large data or media files
+*.csv
+*.json
+*.mp4
+*.png
+*.jpg
+
+# Logs and temp files
+*.log
+tmp/

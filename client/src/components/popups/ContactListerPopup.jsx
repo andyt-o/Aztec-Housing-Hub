@@ -1,3 +1,5 @@
+import React, { useRef } from "react";
+
 export default function ContactListerPopup({
   listing,
   onClose,
@@ -28,9 +30,28 @@ export default function ContactListerPopup({
     (listing.ownerEmail || "").split("@")[0].replace(/[._]/g, " ") ||
     "N/A";
 
+  const overlayClickRef = useRef(false);
+
+  function handleMouseDown(e) {
+    if (e.target === e.currentTarget) {
+      overlayClickRef.current = true;
+    }
+  }
+
+  function handleMouseUp(e) {
+    if (overlayClickRef.current && e.target === e.currentTarget) {
+      onClose();
+    }
+    overlayClickRef.current = false;
+  }
+
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+    <div 
+      className="modal-overlay" 
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
+    >
+      <div className="modal-content">
         <button className="modal-close" onClick={onClose} aria-label="Close">
           &times;
         </button>
@@ -41,16 +62,6 @@ export default function ContactListerPopup({
           <h2 className="modal-title">{listing.title}</h2>
           <p className="modal-posted-by">
             Posted by <strong>{displayName}</strong>
-            {listing.ownerEmail && (
-              <>
-                {" "}
-                <span className="modal-email-link">
-                  <a href={`mailto:${listing.ownerEmail}`} onClick={handleContactClick}>
-                    {listing.ownerEmail}
-                  </a>
-                </span>
-              </>
-            )}
           </p>
         </div>
 
@@ -171,46 +182,10 @@ export default function ContactListerPopup({
             </div>
           )}
 
-          {/* Poster Bio & Roommate Preferences */}
-          {listing.roommateStatus && listing.roommateStatus !== "notLooking" && (
-            <>
-              {(listing.posterBio || listing.posterHobbies || listing.posterCleanliness || listing.posterSleepSchedule) && (
-                <div className="detail-section">
-                  <h4 className="detail-section-title">Living with {displayName.split(' ')[0]}</h4>
-                  <div className="poster-profile-details" style={{ fontSize: '0.9rem', lineHeight: 1.5 }}>
-                    {listing.posterBio && (
-                      <p style={{ marginBottom: '0.75rem' }}>{listing.posterBio}</p>
-                    )}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.5rem' }}>
-                      {listing.posterCleanliness && (
-                        <div>
-                          <strong style={{ display: 'block', fontSize: '0.75rem', color: 'var(--muted)', textTransform: 'uppercase' }}>Cleanliness</strong>
-                          <span>{listing.posterCleanliness}</span>
-                        </div>
-                      )}
-                      {listing.posterSleepSchedule && (
-                        <div>
-                          <strong style={{ display: 'block', fontSize: '0.75rem', color: 'var(--muted)', textTransform: 'uppercase' }}>Sleep Schedule</strong>
-                          <span>{listing.posterSleepSchedule}</span>
-                        </div>
-                      )}
-                    </div>
-                    {listing.posterHobbies && (
-                      <div style={{ marginTop: '0.75rem' }}>
-                        <strong style={{ display: 'block', fontSize: '0.75rem', color: 'var(--muted)', textTransform: 'uppercase' }}>Hobbies & Interests</strong>
-                        <span>{listing.posterHobbies}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Fallback for listings not looking for roommates but still having a bio */}
-          {listing.roommateStatus === "notLooking" && listing.posterBio && (
+          {/* Poster Bio (Biography) */}
+          {listing.posterBio && (listing.roommateStatus === "looking" || listing.roommateStatus === "lookingToRoom") && (
             <div className="detail-section">
-              <h4 className="detail-section-title">About the Host</h4>
+              <h4 className="detail-section-title">ABOUT THIS PERSON</h4>
               <p className="detail-description">{listing.posterBio}</p>
             </div>
           )}

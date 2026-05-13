@@ -1,7 +1,7 @@
 """JSON data API for the Aztec Housing Hub prototype.
 
-Serves housing listings, roommate profiles, and UI config from static JSON
-files so the frontend has zero hardcoded data.
+Serves housing listings, roommate profiles, and UI config.
+Now backed by PostgreSQL for structured data and local JSON for UI config.
 """
 
 import base64
@@ -11,112 +11,76 @@ import json
 import os
 import re
 import random
-import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
+from contextlib import contextmanager
 
 from better_profanity import profanity
+import psycopg2
+from psycopg2 import pool
+from psycopg2.extras import RealDictCursor
+from dotenv import load_dotenv
+
+load_dotenv()
 
 HOST = "127.0.0.1"
 PORT = 5000
 DATA_DIR = Path(__file__).parent / "data"
-DATA_FILE = DATA_DIR / "users.json"
 RED_ID_PATTERN = re.compile(r"^\d{9}$")
 MAX_BODY_BYTES = 64 * 1024
-USERS_LOCK = threading.RLock()
-DATA_LOCK = threading.RLock()
 DEFAULT_ALLOWED_ORIGINS = {"http://localhost:5173", "http://127.0.0.1:5173"}
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable is not set.")
+
+# Initialize thread-safe connection pool
+db_pool = psycopg2.pool.ThreadedConnectionPool(1, 20, dsn=DATABASE_URL)
 
 # ---------------------------------------------------------------------------
 # Vulgarity filter (backed by better-profanity library)
 # ---------------------------------------------------------------------------
-# Load the default profanity word list from better-profanity at startup.
 profanity.load_censor_words()
 
-
 def contains_vulgarity(text: str) -> bool:
-    """Return True if the text contains any vulgar word (case-insensitive)."""
     return profanity.contains_profanity(text)
 
-
 def censor_text(text: str) -> str:
-    """Censor vulgar words in text, returning a sanitized string."""
     return profanity.censor(text)
 
-
 def clamp_price(value: int | float) -> int:
-    """Clamp price between 25 and 10000."""
     return max(25, min(10000, int(value)))
 
-
 # ---------------------------------------------------------------------------
-# Static-data helpers
-# ---------------------------------------------------------------------------
-
-
-def _load_json(name: str) -> object:
-    """Load a JSON file from the data directory (thread-safe)."""
-    path = DATA_DIR / name
-    with DATA_LOCK:
-        if not path.exists():
-            return None
-        try:
-            with path.open("r", encoding="utf-8") as f:
-                return json.load(f)
-        except (json.JSONDecodeError, UnicodeDecodeError):
-            return None
-
-
-def _save_json(name: str, data: object) -> None:
-    """Persist a JSON file atomically."""
-    path = DATA_DIR / name
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    with DATA_LOCK:
-        with tmp.open("w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp, path)
-
-
-def _save_listings(data: dict) -> None:
-    """Persist listings data to disk atomically."""
-    _save_json("listings.json", data)
-
-
-# ---------------------------------------------------------------------------
-# User helpers
+# Database & Config helpers
 # ---------------------------------------------------------------------------
 
+@contextmanager
+def get_db():
+    conn = db_pool.getconn()
+    try:
+        yield conn
+    finally:
+        db_pool.putconn(conn)
 
-def load_users() -> list:
-    """Load the user list from disk.  Returns [] when missing or invalid."""
-    with USERS_LOCK:
-        if not DATA_FILE.exists():
-            return []
-        with DATA_FILE.open("r", encoding="utf-8") as file:
-            try:
-                data = json.load(file)
-            except json.JSONDecodeError:
-                return []
-        return data if isinstance(data, list) else []
+def _load_config() -> object:
+    """Load config.json from the data directory."""
+    path = DATA_DIR / "config.json"
+    if not path.exists():
+        return None
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return None
 
-
-def save_users(users: list) -> None:
-    """Persist the user list to disk atomically."""
-    with USERS_LOCK:
-        tmp = DATA_FILE.with_suffix(DATA_FILE.suffix + ".tmp")
-        with tmp.open("w", encoding="utf-8") as file:
-            json.dump(users, file, indent=2)
-            file.flush()
-            os.fsync(file.fileno())
-        os.replace(tmp, DATA_FILE)
-
+# ---------------------------------------------------------------------------
+# Auth helpers
+# ---------------------------------------------------------------------------
 
 def hash_password(password: str, salt=None) -> dict:
-    """Hash a password with PBKDF2-HMAC-SHA256."""
     salt_bytes = salt or os.urandom(16)
     digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt_bytes, 120000)
     return {
@@ -124,9 +88,7 @@ def hash_password(password: str, salt=None) -> dict:
         "hash": base64.b64encode(digest).decode("utf-8"),
     }
 
-
 def verify_password(password: str, stored: dict) -> bool:
-    """Verify a password against stored hash data."""
     try:
         salt = base64.b64decode(stored["salt"])
     except (KeyError, ValueError, TypeError):
@@ -134,92 +96,11 @@ def verify_password(password: str, stored: dict) -> bool:
     computed = hash_password(password, salt)
     return hmac.compare_digest(computed["hash"], stored.get("hash", ""))
 
-
-def validate_signup(payload: dict, users: list) -> tuple:
-    """Validate and normalize the signup request payload."""
-    errors = {}
-    first_name = str(payload.get("firstName", "")).strip()
-    last_name = str(payload.get("lastName", "")).strip()
-    red_id = str(payload.get("redId", "")).strip()
-    email = str(payload.get("email", "")).strip()
-    password = str(payload.get("password", ""))
-    confirm_password = str(payload.get("confirmPassword", ""))
-
-    if not first_name:
-        errors["firstName"] = "First name is required."
-    if not last_name:
-        errors["lastName"] = "Last name is required."
-    if contains_vulgarity(first_name) or contains_vulgarity(last_name):
-        errors["name"] = "Name contains inappropriate language."
-    if not red_id:
-        errors["redId"] = "Red ID is required."
-    elif not RED_ID_PATTERN.match(red_id):
-        errors["redId"] = "Red ID must be exactly 9 digits."
-    elif any(user.get("redId") == red_id for user in users):
-        errors["redId"] = "That Red ID is already registered."
-    if not email or not email.endswith("@sdsu.edu"):
-        errors["email"] = "SDSU email is required."
-    elif not email:
-        errors["email"] = "Use a valid SDSU email address."
-    elif any(user.get("email") == email for user in users):
-        errors["email"] = "That SDSU email is already registered."
-    if not password:
-        errors["password"] = "Password is required."
-    elif len(password) < 8:
-        errors["password"] = "Password must be at least 8 characters."
-    if not confirm_password:
-        errors["confirmPassword"] = "Please confirm your password."
-    elif password != confirm_password:
-        errors["confirmPassword"] = "Passwords do not match."
-
-    return errors, {
-        "firstName": first_name,
-        "lastName": last_name,
-        "redId": red_id,
-        "email": email,
-        "password": password,
-        "cleanliness": "Moderately clean",
-        "sleepSchedule": "Night owl",
-        "bio": "",
-        "hobbies": "",
-    }
-
-
-def validate_login(payload: dict) -> tuple:
-    """Validate and normalize the login request payload."""
-    errors = {}
-    email = str(payload.get("email", "")).strip().lower()
-    password = str(payload.get("password", ""))
-    if not email:
-        errors["email"] = "Email is required."
-    if not password:
-        errors["password"] = "Password is required."
-    return errors, email, password
-
-
-def _user_to_dict(user: dict) -> dict:
-    """Convert a stored user record to the public-facing user dict."""
-    return {
-        "firstName": user.get("firstName", ""),
-        "lastName": user.get("lastName", ""),
-        "redId": user.get("redId", ""),
-        "email": user.get("email", ""),
-        "cleanliness": user.get("cleanliness", ""),
-        "sleepSchedule": user.get("sleepSchedule", ""),
-        "bio": user.get("bio", ""),
-        "hobbies": user.get("hobbies", ""),
-    }
-
-
 # ---------------------------------------------------------------------------
 # HTTP handler
 # ---------------------------------------------------------------------------
 
-
 class DataHandler(BaseHTTPRequestHandler):
-    """HTTP handler for auth + static-data endpoints."""
-
-    # Route table: method -> {path: handler}
     _GET_ROUTES = {
         "/api/health": "_handle_health",
         "/api/listings": "_handle_listings",
@@ -237,8 +118,8 @@ class DataHandler(BaseHTTPRequestHandler):
     _PUT_ROUTES = {
         "/api/update-name": "_handle_update_name",
         "/api/update-roommate": "_handle_update_roommate",
+        "/api/update-listing": "_handle_update_listing",
     }
-
     _DELETE_ROUTES = {
         "/api/delete-listing": "_handle_delete_listing",
     }
@@ -249,8 +130,6 @@ class DataHandler(BaseHTTPRequestHandler):
 
     def force_close_connection(self):
         self._force_close_after_response = True
-
-    # -- CORS & headers ----------------------------------------------------
 
     def _get_allowed_origins(self):
         raw = os.environ.get("CORS_ALLOW_ORIGINS", "").strip()
@@ -270,219 +149,267 @@ class DataHandler(BaseHTTPRequestHandler):
     def end_headers(self):
         self._send_cors_headers()
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS, DELETE")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "no-referrer")
         super().end_headers()
 
-    # -- Routing helpers ---------------------------------------------------
-
     def _route(self):
-        """Return the handler method name or None."""
         if self.command == "GET":
             routes = self._GET_ROUTES
         elif self.command == "PUT":
             routes = self._PUT_ROUTES
+        elif self.command == "DELETE":
+            routes = self._DELETE_ROUTES
         else:
             routes = self._POST_ROUTES
-        return routes.get(self.path)
+        return routes.get(self.path.split('?')[0])
 
     # -- GET handlers -------------------------------------------------------
 
     def _handle_health(self):
-        self.respond(200, {"status": "ok"})
-
-    def _handle_listings(self):
-        data = _load_json("listings.json")
-        if data is None:
-            self.respond(500, {"message": "listings data not found"})
-            return
-
-        # Enrich each listing with poster's roommate profile
-        users = load_users()
-        email_to_user = {u.get("email", ""): u for u in users}
-
-        for section in ("onCampus", "offCampus"):
-            for listing in data.get(section, []):
-                owner_email = listing.get("ownerEmail", "")
-                poster = email_to_user.get(owner_email)
-                if poster:
-                    listing["posterRoommateStatus"] = poster.get("roommateStatus", "")
-                    listing["posterBio"] = poster.get("bio", "")
-                    listing["posterHobbies"] = poster.get("hobbies", "")
-                    listing["posterCleanliness"] = poster.get("cleanliness", "")
-                    listing["posterSleepSchedule"] = poster.get("sleepSchedule", "")
-
-        self.respond(200, data)
+        try:
+            with get_db() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT 1")
+            self.respond(200, {"status": "ok", "db": "connected"})
+        except Exception as e:
+            self.respond(500, {"status": "error", "db": str(e)})
 
     def _handle_config(self):
-        data = _load_json("config.json")
+        data = _load_config()
         if data is None:
             self.respond(500, {"message": "config not found"})
             return
         self.respond(200, data)
 
     def _handle_zipcodes(self):
-        data = _load_json("zipcodes.json")
-        if data is None:
-            self.respond(500, {"message": "zipcodes data not found"})
+        try:
+            with get_db() as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    cur.execute("SELECT zip, city FROM zipcodes ORDER BY zip ASC")
+                    rows = cur.fetchall()
+            self.respond(200, {"zipcodes": [dict(r) for r in rows]})
+        except Exception as e:
+            self.respond(500, {"message": "Failed to fetch zipcodes."})
+
+    def _handle_listings(self):
+        try:
+            with get_db() as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    cur.execute("""
+                        SELECT l.*, u.bio as poster_bio,
+                               COALESCE(
+                                   (SELECT json_agg(json_build_object('date', ch.date, 'count', ch.count))
+                                    FROM listing_click_history ch WHERE ch.listing_id = l.id),
+                                   '[]'::json
+                               ) as click_history
+                        FROM listings l
+                        LEFT JOIN users u ON l.owner_email = u.email
+                    """)
+                    rows = cur.fetchall()
+
+            on_campus = []
+            off_campus = []
+            for row in rows:
+                listing = {
+                    "id": row["id"],
+                    "title": row["title"],
+                    "type": row["type"],
+                    "placement": row["placement"],
+                    "area": row["area"],
+                    "beds": row["beds"],
+                    "baths": row["baths"],
+                    "price": row["price"],
+                    "availability": row["availability"],
+                    "description": row["description"],
+                    "url": row["url"],
+                    "clicks": row["clicks"],
+                    "clickHistory": row["click_history"]
+                }
+                if row.get("distance") is not None:
+                    listing["distance"] = row["distance"]
+                if row.get("owner_email"):
+                    listing["ownerEmail"] = row["owner_email"]
+                if row.get("roommate_status"):
+                    listing["roommateStatus"] = row["roommate_status"]
+                if row.get("poster_bio"):
+                    listing["posterBio"] = row["poster_bio"]
+
+                if listing["placement"] == "onCampus":
+                    on_campus.append(listing)
+                else:
+                    off_campus.append(listing)
+                    
+            self.respond(200, {"onCampus": on_campus, "offCampus": off_campus})
+        except Exception as e:
+            self.respond(500, {"message": "Failed to load listings."})
+
+    def _handle_click_history(self):
+        query = self.query_string_parsed()
+        listing_id = query.get("listingId")
+        if not listing_id:
+            self.respond(400, {"message": "listingId is required."})
             return
-        self.respond(200, {"zipcodes": data})
+        
+        try:
+            listing_id = int(listing_id)
+            with get_db() as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    cur.execute("SELECT date, count FROM listing_click_history WHERE listing_id = %s ORDER BY date ASC", (listing_id,))
+                    rows = cur.fetchall()
+            
+            history = [{"date": r["date"].strftime("%Y-%m-%d") if hasattr(r["date"], "strftime") else str(r["date"]), "count": r["count"]} for r in rows]
+            self.respond(200, {"history": history})
+        except Exception as e:
+            self.respond(500, {"message": "Failed to fetch click history."})
 
     # -- POST handlers ------------------------------------------------------
 
     def _handle_profanity_check(self):
-        """Check a text string for profanity.  Expects {"text": "...."}."""
         payload = self.read_json()
         if payload is None:
             return
         text = str(payload.get("text", ""))
-        self.respond(
-            200,
-            {
-                "isProfane": profanity.contains_profanity(text),
-                "censored": profanity.censor(text),
-            },
-        )
+        self.respond(200, {
+            "isProfane": profanity.contains_profanity(text),
+            "censored": profanity.censor(text),
+        })
 
     def _handle_signup(self):
         payload = self.read_json()
         if payload is None:
             return
-        with USERS_LOCK:
-            users = load_users()
-            errors, cleaned = validate_signup(payload, users)
-            if errors:
-                self.respond(
-                    400,
-                    {"message": "Please fix the highlighted fields.", "errors": errors},
-                )
+            
+        errors = {}
+        first_name = str(payload.get("firstName", "")).strip()
+        last_name = str(payload.get("lastName", "")).strip()
+        red_id = str(payload.get("redId", "")).strip()
+        email = str(payload.get("email", "")).strip().lower()
+        password = str(payload.get("password", ""))
+        confirm_password = str(payload.get("confirmPassword", ""))
+
+        if not first_name:
+            errors["firstName"] = "First name is required."
+        if not last_name:
+            errors["lastName"] = "Last name is required."
+        if contains_vulgarity(first_name) or contains_vulgarity(last_name):
+            errors["name"] = "Name contains inappropriate language."
+        
+        if not red_id:
+            errors["redId"] = "Red ID is required."
+        elif not RED_ID_PATTERN.match(red_id):
+            errors["redId"] = "Red ID must be exactly 9 digits."
+            
+        if not email or not email.endswith("@sdsu.edu"):
+            errors["email"] = "SDSU email is required."
+        
+        if not password:
+            errors["password"] = "Password is required."
+        elif len(password) < 8:
+            errors["password"] = "Password must be at least 8 characters."
+        if not confirm_password:
+            errors["confirmPassword"] = "Please confirm your password."
+        elif password != confirm_password:
+            errors["confirmPassword"] = "Passwords do not match."
+
+        if not errors:
+            try:
+                with get_db() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT 1 FROM users WHERE red_id = %s", (red_id,))
+                        if cur.fetchone():
+                            errors["redId"] = "That Red ID is already registered."
+                        cur.execute("SELECT 1 FROM users WHERE email = %s", (email,))
+                        if cur.fetchone():
+                            errors["email"] = "That SDSU email is already registered."
+            except Exception as e:
+                self.respond(500, {"message": "Database validation failed."})
                 return
-            password_data = hash_password(cleaned["password"])
-            new_user = {
-                "firstName": censor_text(cleaned["firstName"]),
-                "lastName": censor_text(cleaned["lastName"]),
-                "redId": cleaned["redId"],
-                "email": cleaned["email"],
-                "password": password_data,
-                "cleanliness": cleaned.get("cleanliness", "Moderately clean"),
-                "sleepSchedule": cleaned.get("sleepSchedule", "Night owl"),
-                "bio": cleaned.get("bio", ""),
-                "hobbies": cleaned.get("hobbies", ""),
-                "roommateStatus": cleaned.get("roommateStatus", ""),
-            }
-            users.append(new_user)
-            save_users(users)
-        self.respond(
-            201,
-            {
+
+        if errors:
+            self.respond(400, {"message": "Please fix the highlighted fields.", "errors": errors})
+            return
+
+        password_data = hash_password(password)
+        first_name_clean = censor_text(first_name)
+        last_name_clean = censor_text(last_name)
+
+        try:
+            with get_db() as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    cur.execute("""
+                        INSERT INTO users (first_name, last_name, red_id, email, password_hash, password_salt, bio)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        RETURNING id, first_name, last_name, red_id, email, bio
+                    """, (first_name_clean, last_name_clean, red_id, email, password_data["hash"], password_data["salt"], ""))
+                    new_user_row = cur.fetchone()
+                conn.commit()
+
+            self.respond(201, {
                 "message": "Account created successfully.",
-                "user": _user_to_dict(new_user),
-            },
-        )
+                "user": {
+                    "firstName": new_user_row["first_name"],
+                    "lastName": new_user_row["last_name"],
+                    "redId": new_user_row["red_id"],
+                    "email": new_user_row["email"],
+                    "bio": new_user_row["bio"]
+                }
+            })
+        except Exception as e:
+            self.respond(500, {"message": "Failed to create account."})
 
     def _handle_login(self):
         payload = self.read_json()
         if payload is None:
             return
-        errors, email, password = validate_login(payload)
-        if errors:
-            self.respond(
-                400,
-                {"message": "Please fix the highlighted fields.", "errors": errors},
-            )
-            return
-        users = load_users()
-        user = next((u for u in users if u.get("email") == email), None)
-        if not user or not verify_password(password, user.get("password", {})):
-            self.respond(
-                401,
-                {
-                    "message": "Login failed.",
-                    "errors": {"general": "Incorrect email or password."},
-                },
-            )
-            return
-        self.respond(
-            200,
-            {
-                "message": "Login successful.",
-                "user": _user_to_dict(user),
-            },
-        )
-
-    def _handle_update_name(self):
-        payload = self.read_json()
-        if payload is None:
-            return
-        new_first = str(payload.get("firstName", "")).strip()
-        new_last = str(payload.get("lastName", "")).strip()
+        
+        errors = {}
         email = str(payload.get("email", "")).strip().lower()
-        if not new_first or not new_last:
-            self.respond(400, {"message": "First name and last name are required."})
-            return
-        if contains_vulgarity(new_first) or contains_vulgarity(new_last):
-            self.respond(400, {"message": "Name contains inappropriate language."})
-            return
-        users = load_users()
-        user = next((u for u in users if u.get("email") == email), None)
-        if not user:
-            self.respond(404, {"message": "User not found."})
-            return
-        user["firstName"] = censor_text(new_first)
-        user["lastName"] = censor_text(new_last)
-        save_users(users)
-        self.respond(
-            200,
-            {
-                "message": "Name updated successfully.",
-                "user": _user_to_dict(user),
-            },
-        )
-
-    def _handle_update_roommate(self):
-        """Update the logged-in user's roommate profile fields."""
-        payload = self.read_json()
-        if payload is None:
-            return
-        email = str(payload.get("email", "")).strip().lower()
+        password = str(payload.get("password", ""))
+        
         if not email:
-            self.respond(400, {"message": "Email is required."})
+            errors["email"] = "Email is required."
+        if not password:
+            errors["password"] = "Password is required."
+        
+        if errors:
+            self.respond(400, {"message": "Please fix the highlighted fields.", "errors": errors})
             return
 
-        users = load_users()
-        user = next((u for u in users if u.get("email") == email), None)
-        if not user:
-            self.respond(404, {"message": "User not found."})
-            return
+        try:
+            with get_db() as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    cur.execute("SELECT * FROM users WHERE email = %s", (email,))
+                    user_row = cur.fetchone()
 
-        # Update roommate-profile fields if present
-        roommate_fields = ["cleanliness", "sleepSchedule", "bio", "hobbies", "roommateStatus"]
-        updated = False
-        for field in roommate_fields:
-            if field in payload:
-                value = str(payload.get(field, "")).strip()
-                # Censor user-generated text fields
-                if field in ("bio", "hobbies") and value:
-                    value = censor_text(value)
-                user[field] = value
-                updated = True
+            if not user_row:
+                self.respond(401, {"message": "Login failed.", "errors": {"general": "Incorrect email or password."}})
+                return
 
-        if not updated:
-            self.respond(400, {"message": "No roommate fields to update."})
-            return
+            stored_password = {
+                "salt": user_row["password_salt"],
+                "hash": user_row["password_hash"]
+            }
 
-        save_users(users)
-        self.respond(
-            200,
-            {
-                "message": "Roommate profile saved.",
-                "user": _user_to_dict(user),
-            },
-        )
+            if not verify_password(password, stored_password):
+                self.respond(401, {"message": "Login failed.", "errors": {"general": "Incorrect email or password."}})
+                return
+
+            self.respond(200, {
+                "message": "Login successful.",
+                "user": {
+                    "firstName": user_row["first_name"],
+                    "lastName": user_row["last_name"],
+                    "redId": user_row["red_id"],
+                    "email": user_row["email"],
+                    "bio": user_row.get("bio", "")
+                }
+            })
+        except Exception as e:
+            self.respond(500, {"message": "Login process failed."})
 
     def _handle_add_listing(self):
-        """Persist a new off-campus listing submitted by a logged-in user."""
         payload = self.read_json()
         if payload is None:
             return
@@ -497,7 +424,7 @@ class DataHandler(BaseHTTPRequestHandler):
         description = str(payload.get("description", "")).strip()
         listing_type = str(payload.get("type", "Apartment")).strip()
         placement = str(payload.get("placement", "offCampus")).strip()
-        owner_email = str(payload.get("ownerEmail", "")).strip()
+        owner_email = str(payload.get("ownerEmail", "")).strip().lower()
         roommate_status = str(payload.get("roommateStatus", "")).strip()
 
         errors = {}
@@ -505,170 +432,347 @@ class DataHandler(BaseHTTPRequestHandler):
             errors["title"] = "Title is required."
         elif contains_vulgarity(title):
             errors["title"] = "Title contains inappropriate language."
-        else:
-            existing = _load_json("listings.json") or {"onCampus": [], "offCampus": []}
-            all_titles = [
-                l.get("title", "").lower()
-                for l in existing.get("onCampus", []) + existing.get("offCampus", [])
-            ]
-            if title.lower() in all_titles:
-                errors["title"] = "A listing with this title already exists."
+        
         if not area:
             errors["area"] = "Area is required."
         elif contains_vulgarity(area):
             errors["area"] = "Area contains inappropriate language."
+            
         if description and contains_vulgarity(description):
             errors["description"] = "Description contains inappropriate language."
+            
         if not price or int(price) < 1:
             errors["price"] = "Price must be at least $1."
+            
         if not availability:
             errors["availability"] = "Availability is required."
+            
         if not listing_type:
             errors["type"] = "Listing type is required."
 
+        if not errors:
+            try:
+                with get_db() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT 1 FROM listings WHERE LOWER(title) = LOWER(%s)", (title,))
+                        if cur.fetchone():
+                            errors["title"] = "A listing with this title already exists."
+            except Exception as e:
+                self.respond(500, {"message": "Validation failed."})
+                return
+
         if errors:
-            self.respond(
-                400,
-                {"message": "Please fix the highlighted fields.", "errors": errors},
-            )
+            self.respond(400, {"message": "Please fix the highlighted fields.", "errors": errors})
             return
 
-        data = _load_json("listings.json")
-        if data is None:
-            data = {"onCampus": [], "offCampus": []}
+        try:
+            with get_db() as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    new_id = random.randint(1000000000, 9999999999)
+                    while True:
+                        cur.execute("SELECT 1 FROM listings WHERE id = %s", (new_id,))
+                        if not cur.fetchone():
+                            break
+                        new_id = random.randint(1000000000, 9999999999)
 
-        new_id = random.randint(1000000000, 9999999999)
-        while any(
-            existing.get("id") == new_id
-            for existing in data.get("onCampus", []) + data.get("offCampus", [])
-        ):
-            new_id = random.randint(1000000000, 9999999999)
+                    cur.execute("""
+                        INSERT INTO listings (
+                            id, title, area, price, beds, baths, distance, availability,
+                            description, type, placement, owner_email, roommate_status, clicks, url
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        RETURNING *
+                    """, (
+                        new_id, censor_text(title), censor_text(area), clamp_price(price),
+                        int(beds), int(baths), float(distance), availability,
+                        censor_text(description), listing_type, placement, owner_email,
+                        roommate_status, 0, "#"
+                    ))
+                    new_db_listing = cur.fetchone()
+                conn.commit()
 
-        new_listing = {
-            "id": new_id,
-            "title": censor_text(title),
-            "area": censor_text(area),
-            "price": clamp_price(price),
-            "beds": int(beds),
-            "baths": int(baths),
-            "distance": float(distance),
-            "availability": availability,
-            "description": censor_text(description),
-            "type": listing_type,
-            "placement": placement,
-            "ownerEmail": owner_email,
-            "roommateStatus": roommate_status,
-            "clicks": 0,
-            "url": "#",
-        }
-
-        section = "onCampus" if placement == "onCampus" else "offCampus"
-        data[section].append(new_listing)
-        _save_listings(data)
-
-        self.respond(
-            201, {"message": "Listing created successfully.", "listing": new_listing}
-        )
+            new_listing = {
+                "id": new_db_listing["id"],
+                "title": new_db_listing["title"],
+                "area": new_db_listing["area"],
+                "price": new_db_listing["price"],
+                "beds": new_db_listing["beds"],
+                "baths": new_db_listing["baths"],
+                "distance": new_db_listing["distance"],
+                "availability": new_db_listing["availability"],
+                "description": new_db_listing["description"],
+                "type": new_db_listing["type"],
+                "placement": new_db_listing["placement"],
+                "ownerEmail": new_db_listing["owner_email"],
+                "roommateStatus": new_db_listing["roommate_status"],
+                "clicks": new_db_listing["clicks"],
+                "url": new_db_listing["url"]
+            }
+            self.respond(201, {"message": "Listing created successfully.", "listing": new_listing})
+        except Exception as e:
+            self.respond(500, {"message": "Failed to create listing."})
 
     def _handle_track_click(self):
         payload = self.read_json()
         if payload is None:
             return
+            
         listing_id = payload.get("listingId")
         if listing_id is None:
             self.respond(400, {"message": "listingId is required."})
             return
-        data = _load_json("listings.json")
-        if data is None:
-            self.respond(500, {"message": "listings data not found"})
-            return
-        found = False
-        for section in ("onCampus", "offCampus"):
-            for listing in data.get(section, []):
-                if listing.get("id") == listing_id:
-                    listing["clicks"] = (listing.get("clicks") or 0) + 1
-                    # Record per-day click history
-                    today = datetime.utcnow().strftime("%Y-%m-%d")
-                    click_history = listing.get("clickHistory", [])
-                    if click_history and click_history[-1].get("date") == today:
-                        click_history[-1]["count"] += 1
-                    else:
-                        click_history.append({"date": today, "count": 1})
-                    listing["clickHistory"] = click_history
-                    # Trim to last 90 days
-                    if len(click_history) > 90:
-                        click_history[:] = click_history[-90:]
-                    found = True
-                    break
-            if found:
-                break
-        if not found:
-            self.respond(404, {"message": "Listing not found."})
-            return
-        _save_listings(data)
-        self.respond(200, {"message": "Click tracked."})
+            
+        try:
+            with get_db() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("UPDATE listings SET clicks = clicks + 1 WHERE id = %s RETURNING id", (listing_id,))
+                    if not cur.fetchone():
+                        self.respond(404, {"message": "Listing not found."})
+                        return
+                    
+                    pst_now = datetime.utcnow() - timedelta(hours=7)
+                    today = pst_now.strftime("%Y-%m-%d")
+                    
+                    cur.execute("""
+                        INSERT INTO listing_click_history (listing_id, date, count)
+                        VALUES (%s, %s, 1)
+                        ON CONFLICT (listing_id, date)
+                        DO UPDATE SET count = listing_click_history.count + 1
+                    """, (listing_id, today))
+                    
+                    ninety_days_ago = pst_now - timedelta(days=90)
+                    cur.execute("DELETE FROM listing_click_history WHERE listing_id = %s AND date < %s", 
+                                (listing_id, ninety_days_ago.strftime("%Y-%m-%d")))
+                conn.commit()
+            self.respond(200, {"message": "Click tracked."})
+        except Exception as e:
+            self.respond(500, {"message": "Failed to track click."})
 
-    def _handle_click_history(self):
-        query = self.query_string_parsed()
-        listing_id = query.get("listingId")
-        if listing_id is None:
-            self.respond(400, {"message": "listingId is required."})
+    # -- PUT / DELETE handlers ----------------------------------------------
+
+    def _handle_update_name(self):
+        payload = self.read_json()
+        if payload is None:
             return
+            
+        new_first = str(payload.get("firstName", "")).strip()
+        new_last = str(payload.get("lastName", "")).strip()
+        email = str(payload.get("email", "")).strip().lower()
+        
+        if not new_first or not new_last:
+            self.respond(400, {"message": "First name and last name are required."})
+            return
+        if contains_vulgarity(new_first) or contains_vulgarity(new_last):
+            self.respond(400, {"message": "Name contains inappropriate language."})
+            return
+            
+        try:
+            with get_db() as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    cur.execute("""
+                        UPDATE users
+                        SET first_name = %s, last_name = %s
+                        WHERE email = %s
+                        RETURNING first_name, last_name, red_id, email, bio
+                    """, (censor_text(new_first), censor_text(new_last), email))
+                    updated_user = cur.fetchone()
+                
+                if not updated_user:
+                    self.respond(404, {"message": "User not found."})
+                    return
+                conn.commit()
+
+            self.respond(200, {
+                "message": "Name updated successfully.",
+                "user": {
+                    "firstName": updated_user["first_name"],
+                    "lastName": updated_user["last_name"],
+                    "redId": updated_user["red_id"],
+                    "email": updated_user["email"],
+                    "bio": updated_user.get("bio", "")
+                }
+            })
+        except Exception as e:
+            self.respond(500, {"message": "Failed to update name."})
+
+    def _handle_update_roommate(self):
+        payload = self.read_json()
+        if payload is None:
+            return
+            
+        email = str(payload.get("email", "")).strip().lower()
+        if not email:
+            self.respond(400, {"message": "Email is required."})
+            return
+
+        updated = False
+        updates = []
+        params = []
+        
+        if "bio" in payload:
+            updates.append("bio = %s")
+            val = str(payload.get("bio", "")).strip()
+            params.append(censor_text(val) if val else "")
+            updated = True
+            
+        if "cleanliness" in payload:
+            updates.append("cleanliness = %s")
+            params.append(str(payload.get("cleanliness", "")).strip())
+            updated = True
+            
+        if "sleepSchedule" in payload:
+            updates.append("sleep_schedule = %s")
+            params.append(str(payload.get("sleepSchedule", "")).strip())
+            updated = True
+            
+        if "roommateStatus" in payload:
+            updates.append("roommate_status = %s")
+            params.append(str(payload.get("roommateStatus", "")).strip())
+            updated = True
+        
+        if not updated:
+            self.respond(400, {"message": "No roommate fields to update."})
+            return
+
+        params.append(email)
+        
+        try:
+            with get_db() as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    cur.execute(f"""
+                        UPDATE users
+                        SET {", ".join(updates)}
+                        WHERE email = %s
+                        RETURNING first_name, last_name, red_id, email, bio
+                    """, tuple(params))
+                    updated_user = cur.fetchone()
+                    
+                if not updated_user:
+                    self.respond(404, {"message": "User not found."})
+                    return
+                conn.commit()
+
+            self.respond(200, {
+                "message": "Roommate profile saved.",
+                "user": {
+                    "firstName": updated_user["first_name"],
+                    "lastName": updated_user["last_name"],
+                    "redId": updated_user["red_id"],
+                    "email": updated_user["email"],
+                    "bio": updated_user.get("bio", "")
+                }
+            })
+        except Exception as e:
+            self.respond(500, {"message": "Failed to update roommate profile."})
+
+    def _handle_update_listing(self):
+        payload = self.read_json()
+        if payload is None:
+            return
+
+        listing_id = payload.get("id")
+        if not listing_id:
+            self.respond(400, {"message": "listing id is required."})
+            return
+            
         try:
             listing_id = int(listing_id)
         except (ValueError, TypeError):
-            self.respond(400, {"message": "Invalid listingId."})
+            self.respond(400, {"message": "Invalid listing id."})
             return
-        data = _load_json("listings.json")
-        if data is None:
-            self.respond(500, {"message": "listings data not found"})
+
+        updates = []
+        params = []
+        
+        if "price" in payload:
+            updates.append("price = %s")
+            params.append(clamp_price(payload["price"]))
+        if "description" in payload:
+            updates.append("description = %s")
+            params.append(censor_text(str(payload["description"]).strip()))
+        if "title" in payload:
+            updates.append("title = %s")
+            params.append(censor_text(str(payload["title"]).strip()))
+        if "roommateStatus" in payload:
+            updates.append("roommate_status = %s")
+            params.append(str(payload["roommateStatus"]).strip())
+        if "availability" in payload:
+            updates.append("availability = %s")
+            params.append(str(payload["availability"]).strip())
+            
+        if not updates:
+            self.respond(400, {"message": "No fields to update."})
             return
-        found = False
-        history = []
-        for section in ("onCampus", "offCampus"):
-            for listing in data.get(section, []):
-                if listing.get("id") == listing_id:
-                    found = True
-                    history = listing.get("clickHistory", [])
-                    break
-            if found:
-                break
-        if not found:
-            self.respond(404, {"message": "Listing not found."})
-            return
-        self.respond(200, {"history": history})
+            
+        params.append(listing_id)
+        
+        try:
+            with get_db() as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    cur.execute(f"""
+                        UPDATE listings
+                        SET {", ".join(updates)}
+                        WHERE id = %s
+                        RETURNING *
+                    """, tuple(params))
+                    updated_db_listing = cur.fetchone()
+                    
+                if not updated_db_listing:
+                    self.respond(404, {"message": "Listing not found."})
+                    return
+                conn.commit()
+
+            listing_to_update = {
+                "id": updated_db_listing["id"],
+                "title": updated_db_listing["title"],
+                "type": updated_db_listing["type"],
+                "placement": updated_db_listing["placement"],
+                "area": updated_db_listing["area"],
+                "beds": updated_db_listing["beds"],
+                "baths": updated_db_listing["baths"],
+                "price": updated_db_listing["price"],
+                "availability": updated_db_listing["availability"],
+                "description": updated_db_listing["description"],
+                "url": updated_db_listing["url"],
+                "clicks": updated_db_listing["clicks"],
+            }
+            if updated_db_listing.get("distance") is not None:
+                listing_to_update["distance"] = updated_db_listing["distance"]
+            if updated_db_listing.get("owner_email"):
+                listing_to_update["ownerEmail"] = updated_db_listing["owner_email"]
+            if updated_db_listing.get("roommate_status"):
+                listing_to_update["roommateStatus"] = updated_db_listing["roommate_status"]
+
+            self.respond(200, {"message": "Listing updated successfully.", "listing": listing_to_update})
+        except Exception as e:
+            self.respond(500, {"message": "Failed to update listing."})
 
     def _handle_delete_listing(self):
         payload = self.read_json()
         if payload is None:
             return
+            
         listing_id = payload.get("listingId")
-        if listing_id is None:
+        if not listing_id:
             self.respond(400, {"message": "listingId is required."})
             return
+            
         try:
             listing_id = int(listing_id)
         except (ValueError, TypeError):
             self.respond(400, {"message": "Invalid listingId."})
             return
-        data = _load_json("listings.json")
-        if data is None:
-            self.respond(500, {"message": "listings data not found"})
-            return
-        found = False
-        for section in ("onCampus", "offCampus"):
-            original_len = len(data.get(section, []))
-            data[section] = [l for l in data.get(section, []) if l.get("id") != listing_id]
-            if len(data[section]) < original_len:
-                found = True
-                break
-        if not found:
-            self.respond(404, {"message": "Listing not found."})
-            return
-        _save_listings(data)
-        self.respond(200, {"message": "Listing deleted successfully."})
-
-    # -- PUT handler --------------------------------------------------------
+            
+        try:
+            with get_db() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("DELETE FROM listings WHERE id = %s RETURNING id", (listing_id,))
+                    if not cur.fetchone():
+                        self.respond(404, {"message": "Listing not found."})
+                        return
+                conn.commit()
+            self.respond(200, {"message": "Listing deleted successfully."})
+        except Exception as e:
+            self.respond(500, {"message": "Failed to delete listing."})
 
     # -- HTTP verbs ---------------------------------------------------------
 
@@ -739,24 +843,20 @@ class DataHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def query_string_parsed(self):
-        """Parse query string parameters into a dict."""
         parsed = urlparse(self.path)
         return dict(parse_qs(parsed.query))
 
     def log_message(self, format, *args):
         return  # silence
 
-
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
-
 
 def run():
     server = ThreadingHTTPServer((HOST, PORT), DataHandler)
     print(f"Data server running at http://{HOST}:{PORT}")
     server.serve_forever()
-
 
 if __name__ == "__main__":
     run()
