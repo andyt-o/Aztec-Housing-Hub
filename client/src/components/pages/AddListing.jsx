@@ -91,6 +91,15 @@ function isDisabled(day) {
   );
 }
 
+const listingTypes = ["Apartment", "Room", "House", "Sublease"];
+
+const roommateStatusOptions = [
+  { value: "", label: "Not set" },
+  { value: "looking", label: "Looking for roommates" },
+  { value: "lookingToRoom", label: "Looking to room with others" },
+  { value: "notLooking", label: "Not looking for roommates" },
+];
+
 const initialForm = {
   title: "",
   price: "",
@@ -102,6 +111,7 @@ const initialForm = {
   availability: "",
   description: "",
   type: "Apartment",
+  roommateStatus: "",
 };
 
 const ZIP_TO_DISTANCE = {
@@ -150,8 +160,6 @@ const ZIP_TO_DISTANCE = {
   "92591": 55, "92592": 56, "92593": 55, "92594": 54, "92595": 55,
   "92596": 56,
 };
-
-const listingTypes = ["Apartment", "Room", "House", "Sublease"];
 
 export default function AddListing({ currentUser, onAddListing }) {
   const [form, setForm] = useState(initialForm);
@@ -311,6 +319,7 @@ export default function AddListing({ currentUser, onAddListing }) {
           type: form.type,
           placement: "offCampus",
           ownerEmail: (currentUser?.email || "").trim().toLowerCase(),
+          roommateStatus: form.roommateStatus,
         }),
       });
 
@@ -479,6 +488,23 @@ export default function AddListing({ currentUser, onAddListing }) {
                   <small className="field-error">{fieldErrors.description}</small>
                 )}
               </label>
+
+              <div className="roommate-status-section">
+                <label>
+                  Roommate Status
+                  <select
+                    value={form.roommateStatus}
+                    onChange={(e) => updateField("roommateStatus", e.target.value)}
+                    disabled={isSubmitting}
+                  >
+                    {roommateStatusOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
 
               <label>
                 Zipcode

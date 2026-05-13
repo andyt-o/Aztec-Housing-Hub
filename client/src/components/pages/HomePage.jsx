@@ -281,10 +281,12 @@ function UpdatesPanel({ allListings, preferences, myListings, onTrackClick, onSe
   recommended.sort((a, b) => (b.clicks || 0) - (a.clicks || 0));
   recommended = recommended.slice(0, 6);
 
-  function handleCardClick(listing, e) {
+function handleCardClick(listing) {
     onTrackClick(listing.id);
     if (listing.placement === "onCampus" && listing.url) {
       window.open(listing.url, "_blank", "noopener,noreferrer");
+    } else if (!currentUser) {
+      navigateTo("auth");
     } else {
       onSelectListing(listing);
     }

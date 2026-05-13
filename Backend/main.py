@@ -439,6 +439,8 @@ class DataHandler(BaseHTTPRequestHandler):
         listing_type = str(payload.get("type", "Apartment")).strip()
         placement = str(payload.get("placement", "offCampus")).strip()
         owner_email = str(payload.get("ownerEmail", "")).strip()
+        roommate_status = str(payload.get("roommateStatus", "")).strip()
+
 
         errors = {}
         if not title:
@@ -499,6 +501,7 @@ class DataHandler(BaseHTTPRequestHandler):
             "type": listing_type,
             "placement": placement,
             "ownerEmail": owner_email,
+            "roommateStatus": roommate_status,
             "clicks": 0,
             "url": "#",
         }

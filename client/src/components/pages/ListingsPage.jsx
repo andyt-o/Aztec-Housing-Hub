@@ -10,6 +10,7 @@ export default function ListingsPage({
   preferences = {},
   setPreferences,
   currentUser,
+  navigateTo,
 }) {
   // ── Independent search state per panel ──
   const [onCampusSearch, setOnCampusSearch] = useState("");
@@ -76,6 +77,14 @@ export default function ListingsPage({
     if (setPreferences) {
       setPreferences((c) => ({ ...c, housingPlacement: value }));
     }
+  }
+
+  function handleContactClick(listing) {
+    if (!currentUser) {
+      navigateTo("auth");
+      return;
+    }
+    setSelectedListing(listing);
   }
 
   // ── FilterSection ──
@@ -272,7 +281,7 @@ export default function ListingsPage({
                   <button
                     className="contact-btn"
                     style={{ marginTop: "0.75rem", display: "inline-block", width: "100%" }}
-                    onClick={() => setSelectedListing(listing)}
+                    onClick={() => handleContactClick(listing)}
                   >
                     Contact Lister
                   </button>
@@ -301,7 +310,7 @@ export default function ListingsPage({
                 <button
                   className="contact-btn"
                   style={{ marginTop: "0.75rem", display: "inline-block", width: "100%" }}
-                  onClick={() => setSelectedListing(listing)}
+                  onClick={() => handleContactClick(listing)}
                 >
                   Contact Lister
                 </button>

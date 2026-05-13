@@ -556,6 +556,7 @@ export default function App() {
             {...pageProps}
             onTrackClick={handleTrackClick}
             currentUser={currentUser}
+            navigateTo={navigateTo}
           />
         );
       case "add-listing":
